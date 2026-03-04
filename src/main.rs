@@ -24,6 +24,7 @@ fn main() {
     loop {
         match listener.accept() {
             Ok((mut stream, _)) => {
+                stream.set_nonblocking(true).unwrap();
                 clients.push(stream);
             }
             Err(error) => {
