@@ -1,7 +1,10 @@
 #![allow(unused_imports)]
 use std::{
-    io::{Read, Write},
-    net::TcpListener, str::from_utf8,
+    collections::VecDeque,
+    io::{ErrorKind, Read, Write},
+    net::{TcpListener, TcpStream},
+    os::unix::net::SocketAddr,
+    str::from_utf8,
 };
 
 use bytes::buf;
@@ -13,30 +16,29 @@ fn main() {
     // Uncomment the code below to pass the first stage
 
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
-
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut _stream) => {
-                println!("accepted new connection");
-               
-                loop{
-                let mut buffer = [0; 1024];
-                let bytes_read = _stream.read(&mut buffer).expect("stream is not read");
-                    if bytes_read == 0{
-                        break;
-                    }
-                    _stream.write_all(b"+PONG\r\n").unwrap();
-                }
-                // let message = from_utf8(&buffer[..bytes_read]).unwrap();
-                // let count = message.matches("PING").count();
-                // // println!("message,  {}",message);
-                // for _ in 0..count{
-                //     // println!("PONG");
-                //     _stream.write_all(b"+PONG\r\n").unwrap();
-                // }
+    let mut queue = VecDeque::<TcpStream>::new();
+    let mut clients = Vec::<TcpStream>::new();
+    listener.set_nonblocking(true).expect("non blocking is not possible");
+    loop {
+        match listener.accept() {
+            Ok((mut stream, _)) => {
+                clients.push(stream);
             }
-                Err(e) => {
-                println!("error: {}", e);
+            Err(error) => {
+                // println!("{:?}",error);
+                // break;
+            }
+           
+        }
+        for mut _stream in &clients {
+            let mut buffer = [0; 1024];
+            
+            let bytes_read = _stream.read(&mut buffer).expect("stream is not read");
+            // println!("sadasd");
+            if bytes_read != 0 {
+                _stream.write_all(b"+PONG\r\n").unwrap();
+                // println!("PONG");
+
             }
         }
     }
