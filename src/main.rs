@@ -37,7 +37,7 @@ fn main() {
             let bytes_read = _stream.read(&mut buffer).expect("stream is not read");
             // println!("sadasd");
             let message = from_utf8(&buffer[..bytes_read]).unwrap();
-            let count = message.matches("PING").count();
+            let count = message.matches("PING\r\n").count();
             if bytes_read != 0 {
                 for _ in 0..count {
                     _stream.write_all(b"+PONG\r\n").unwrap();
