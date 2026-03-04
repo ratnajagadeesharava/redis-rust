@@ -24,8 +24,8 @@ fn main() {
                 let count = message.matches("PING").count();
                 // println!("message,  {}",message);
                 for _ in 0..count{
-                    println!("PONG");
-                    _stream.write_all(b"PONG").unwrap();
+                    // println!("PONG");
+                    _stream.write_all(b"+PONG").unwrap();
                 }
             }
                 Err(e) => {
