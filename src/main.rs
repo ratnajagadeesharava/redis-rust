@@ -25,7 +25,7 @@ fn main() {
                 // println!("message,  {}",message);
                 for _ in 0..count{
                     // println!("PONG");
-                    _stream.write_all(b"+PONG").unwrap();
+                    _stream.write_all(b"+PONG\r\n").unwrap();
                 }
             }
                 Err(e) => {
