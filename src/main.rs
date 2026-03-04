@@ -18,7 +18,9 @@ fn main() {
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
     let mut queue = VecDeque::<TcpStream>::new();
     let mut clients = Vec::<TcpStream>::new();
-    listener.set_nonblocking(true).expect("non blocking is not possible");
+    listener
+        .set_nonblocking(true)
+        .expect("non blocking is not possible");
     loop {
         match listener.accept() {
             Ok((mut stream, _)) => {
@@ -28,18 +30,21 @@ fn main() {
                 // println!("{:?}",error);
                 // break;
             }
-           
         }
         for mut _stream in &clients {
             let mut buffer = [0; 1024];
-            
+
             let bytes_read = _stream.read(&mut buffer).expect("stream is not read");
             // println!("sadasd");
+            let message = from_utf8(&buffer[..bytes_read]).unwrap();
+            let count = message.matches("PING").count();
             if bytes_read != 0 {
-                _stream.write_all(b"+PONG\r\n").unwrap();
+                for _ in 0..count {
+                    _stream.write_all(b"+PONG\r\n").unwrap();
+                }
                 // println!("PONG");
-
             }
         }
     }
 }
+
