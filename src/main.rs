@@ -34,15 +34,19 @@ fn main() {
         for mut _stream in &clients {
             let mut buffer = [0; 1024];
 
-            let bytes_read = _stream.read(&mut buffer).expect("stream is not read");
-            // println!("sadasd");
-            let message = from_utf8(&buffer[..bytes_read]).unwrap();
-            let count = message.matches("PING\r\n").count();
-            if bytes_read != 0 {
-                for _ in 0..count {
-                    _stream.write_all(b"+PONG\r\n").unwrap();
+            match _stream.read(&mut buffer) {
+                // println!("sadasd");
+                Ok(bytes_read) => {
+                    let message = from_utf8(&buffer[..bytes_read]).unwrap();
+                    let count = message.matches("PING\r\n").count();
+                    if bytes_read != 0 {
+                        for _ in 0..count {
+                            _stream.write_all(b"+PONG\r\n").unwrap();
+                        }
+                        // println!("PONG");
+                    }
                 }
-                // println!("PONG");
+                Err(error) => {}
             }
         }
     }
