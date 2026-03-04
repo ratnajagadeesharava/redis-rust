@@ -18,15 +18,22 @@ fn main() {
         match stream {
             Ok(mut _stream) => {
                 println!("accepted new connection");
+               
+                loop{
                 let mut buffer = [0; 1024];
                 let bytes_read = _stream.read(&mut buffer).expect("stream is not read");
-                let message = from_utf8(&buffer[..bytes_read]).unwrap();
-                let count = message.matches("PING").count();
-                // println!("message,  {}",message);
-                for _ in 0..count{
-                    // println!("PONG");
+                    if bytes_read == 0{
+                        break;
+                    }
                     _stream.write_all(b"+PONG\r\n").unwrap();
                 }
+                // let message = from_utf8(&buffer[..bytes_read]).unwrap();
+                // let count = message.matches("PING").count();
+                // // println!("message,  {}",message);
+                // for _ in 0..count{
+                //     // println!("PONG");
+                //     _stream.write_all(b"+PONG\r\n").unwrap();
+                // }
             }
                 Err(e) => {
                 println!("error: {}", e);
