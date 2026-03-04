@@ -31,7 +31,7 @@ fn main() {
                 // break;
             }
         }
-        for mut _stream in &clients {
+        for _stream in &mut clients {
             let mut buffer = [0; 1024];
 
             match _stream.read(&mut buffer) {
