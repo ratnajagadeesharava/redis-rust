@@ -9,62 +9,71 @@ use std::{
 
 use bytes::buf;
 use regex::Regex;
+use regex_split::RegexSplit;
 #[derive(Debug)]
-enum Resp{
+enum Resp {
     SimpleString(String),
     Error(String),
     Integer(i64),
     BulkString(String),
     Array(Vec<Resp>),
-    Other(String)
+    Other(String),
 }
-fn extract_RESP_Comands(message:&str)->Resp{
-    let chars:Vec<char> = message.chars().collect();
+fn extract_RESP_Comands(message: &str) -> Resp {
+    let chars: Vec<char> = message.chars().collect();
     let n = message.len();
-    match chars[0]{
-        '+'=>{
-            Resp::SimpleString(String::from(&message[1..n-2]))
+    match chars[0] {
+        '+' => Resp::SimpleString(String::from(&message[1..n - 2])),
+        '-' => Resp::Error(String::from(&message[1..n - 2])),
+        ':' => Resp::Integer((&message[1..n - 2]).parse::<i64>().unwrap()),
+        '$' => {
+            let messages: Vec<&str> = message.split("\r\n").collect();
+
+            Resp::BulkString(String::from(messages[1]))
         }
-        '-'=>{
-           Resp::Error(String::from(&message[1..n-2]))
-        }
-        ':'=>{
-            Resp::Integer((&message[1..n]).parse::<i64>().unwrap())
-        }
-        '$'=>{
-           Resp::BulkString(String::from(&message[1..n-2]))
-        }
-        '*'=>{
-            let mut respArray =Vec::<Resp>::new(); 
-            let re = Regex::new(r"(\+.*\r\n)|(\-.*\r\n)|(\:[0-9]+\r\n)|(\$[0-9]+\r\n.*\r\n)|(\*[0-9]+\r\n)");
-            let messages:Vec<&str> = message.split("\r\n").collect();
-            let arrLen = messages[0].parse::<usize>();
-            for i in 1..messages.len(){
-                respArray.push(extract_RESP_Comands(messages[i]));
+        '*' => {
+            let mut respArray = Vec::<Resp>::new();
+            let re = Regex::new(
+                r"(\+.*\r\n)|(\-.*\r\n)|(\:[0-9]+\r\n)|(\$[0-9]+\r\n.*\r\n)|(\*[0-9]+\r\n)",
+            )
+            .unwrap();
+
+            let messages: Vec<&str> = re.split_inclusive(&message[0..n]).collect();
+            println!("{:?}", messages);
+            let l = messages.len();
+            for i in 1..l {
+                if messages[i].len() > 0 {
+                    respArray.push(extract_RESP_Comands(messages[i]));
+                }
             }
             Resp::Array(respArray)
         }
-        _=>{
-            Resp::Other(String::from(&message[1..n]))
-            
-        }
+        _ => Resp::Other(String::from(&message[1..n])),
     }
 }
+fn execute_redis_command(command:String,arguments:Vec<String>){
 
+}
+fn execute_commands(cmd: Resp){
+    match cmd{
+        Resp::SimpleString(command) => todo!(),
+        Resp::Error(_) => todo!(),
+        Resp::Integer(_) => todo!(),
+        Resp::BulkString(_) => todo!(),
+        Resp::Array(resps) => todo!(),
+        Resp::Other(_) => todo!(),
+    }
+
+}
 fn handle_stream(stream: &mut TcpStream) {
     let mut buffer = [0; 1024];
     match stream.read(&mut buffer) {
         Ok(bytes_read) => {
-            let message = from_utf8(&buffer[..bytes_read]).unwrap();
-            // let messages: Vec<String> = Vec::<String>::new();
-            // println!("{message}");
-            let messages = extract_RESP_Comands(message);
-            println!("{:?}",messages);
-            let count: usize = message.matches("PING\r\n").count();
             if bytes_read != 0 {
-                for _ in 0..count {
-                    stream.write_all(b"+PONG\r\n").unwrap();
-                }
+                let message = from_utf8(&buffer[..bytes_read]).unwrap();
+
+                let cmd: Resp = extract_RESP_Comands(message);
+                execute_commands(cmd);
             }
         }
         Err(_) => {}
@@ -72,7 +81,6 @@ fn handle_stream(stream: &mut TcpStream) {
 }
 
 fn main() {
-
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
     let mut clients = Vec::<TcpStream>::new();
     listener
@@ -84,9 +92,7 @@ fn main() {
                 stream.set_nonblocking(true).unwrap();
                 clients.push(stream);
             }
-            Err(_) => {
-                
-            }
+            Err(_) => {}
         }
         for _stream in &mut clients {
             handle_stream(_stream);
