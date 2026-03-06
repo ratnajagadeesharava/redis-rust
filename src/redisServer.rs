@@ -140,6 +140,7 @@ impl RedisServer {
         if redisDb.map.contains_key(&key) {
             if let Some(obj) = redisDb.map.get_mut(&key) {
                 if let DataType::LIST(list) = &mut obj.data {
+                    println!("order given{:?}",values);
                     for value in values {
                         list.push_front(value);
                     }
