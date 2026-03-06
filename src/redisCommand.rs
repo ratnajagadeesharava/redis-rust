@@ -57,7 +57,7 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                 let mut values = Vec::<String>::new();
                 index += 2;
                 for i in (index..n).step_by(2){
-                    values.push(command_array[index].clone());
+                    values.push(command_array[i].clone());
                 }
 
                 redisCommand = RedisCommand::RPush(key, values);
