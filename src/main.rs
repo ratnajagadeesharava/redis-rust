@@ -1,6 +1,11 @@
 #![allow(unused_imports)]
 use std::{
-    collections::VecDeque, f32::consts::E, io::{ErrorKind, Read, Write}, net::{TcpListener, TcpStream}, os::unix::net::SocketAddr, str::from_utf8
+    collections::VecDeque,
+    f32::consts::E,
+    io::{ErrorKind, Read, Write},
+    net::{TcpListener, TcpStream},
+    os::unix::net::SocketAddr,
+    str::from_utf8,
 };
 
 use bytes::buf;
@@ -15,7 +20,6 @@ enum Resp<'a> {
     Array(Vec<&'a str>),
     Other(&'a str),
 }
-
 
 fn parse_message(message: &str) -> Resp {
     let n = message.len();
@@ -57,10 +61,16 @@ fn handle_stream(stream: &mut TcpStream) {
                 let message = from_utf8(&buffer[..bytes_read]).unwrap();
                 let resp = parse_message(message);
                 // if let Resp::Array(value) = resp{
-                    
+
                 // }
-                match resp{
-                    Resp::SimpleString(_) => todo!(),
+                println!("{:?}", resp);
+                match resp {
+                    Resp::SimpleString(value) => {
+                         let count = message.matches("PING").count();
+                        for _ in 0..count {
+                            stream.write_all(b"+PONG\r\n").unwrap();
+                        }
+                    },
                     Resp::Error(_) => todo!(),
                     Resp::Integer(_) => todo!(),
                     Resp::BulkString(value) => {
@@ -68,33 +78,32 @@ fn handle_stream(stream: &mut TcpStream) {
                         for _ in 0..count {
                             stream.write_all(b"+PONG\r\n").unwrap();
                         }
-                    },
-                    Resp::Array(value) =>{
-                        let l = value.len();
-                    let command = value[2];
-                    if command == "ECHO"{
-                        let s = format!("{}\r\n{}\r\n",value[3],value[4]);
-                        stream.write_all(s.as_bytes());
                     }
-                    },
+                    Resp::Array(value) => {
+                        let l = value.len();
+                        let command = value[2];
+                        if command == "ECHO" {
+                            let s = format!("{}\r\n{}\r\n", value[3], value[4]);
+                            stream.write_all(s.as_bytes()).unwrap();
+                        }
+                    }
                     Resp::Other(_) => todo!(),
                 }
-              
             }
         }
         Err(_) => {}
     }
 }
-enum Command{
+enum Command {
     Echo(String),
     Ping,
-    SET(String,String),
-    GET(String)
+    SET(String, String),
+    GET(String),
 }
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
     let mut clients = Vec::<TcpStream>::new();
-    
+
     listener
         .set_nonblocking(true)
         .expect("non blocking is not possible");
