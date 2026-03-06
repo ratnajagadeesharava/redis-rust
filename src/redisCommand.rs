@@ -20,7 +20,8 @@ pub enum RedisCommand {
     Echo(String),
     Unkown,
     LRANGE(String,i32,i32),
-     LPush(String, Vec<String>)
+     LPush(String, Vec<String>),
+     LLEN (String)
 }
 
 type CommandFn = fn();
@@ -45,6 +46,7 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                     redisCommand = RedisCommand::Set(key, value, None);
                 }
             }
+            "LLEN"=> redisCommand = RedisCommand::LLEN(command_array[index + 2].clone()),
             "GET" => redisCommand = RedisCommand::Get(command_array[index + 2].clone()),
             "PING" => redisCommand = RedisCommand::Ping,
             "ECHO" => {

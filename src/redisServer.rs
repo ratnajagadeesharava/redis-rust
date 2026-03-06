@@ -29,9 +29,28 @@ impl RedisServer {
             RedisCommand::Ping => Self::ping(stream),
             RedisCommand::LRANGE(key, start, end) => Self::lrange(stream, redisDb, key, start, end),
             RedisCommand::LPush(key, value) => Self::l_push(stream, redisDb, key, value),
+            RedisCommand::LLEN(key)=>Self::list_length(stream, redisDb, key,)
         }
     }
-    
+    fn list_length( stream: &mut TcpStream,
+        redisDb: &mut RedisDb,
+        key: String,){
+             if redisDb.map.contains_key(&key) {
+            if let Some(obj) = redisDb.map.get_mut(&key) {
+                if let DataType::LIST(list) = &mut obj.data {
+                    
+                    let count = list.count;
+                   
+                    stream.write_all(&parse_resp(Resp::Integer(count))).unwrap();
+                }
+            }
+        }
+        else{
+            stream.write_all(&parse_resp(Resp::Integer(0))).unwrap()
+        }
+        }
+
+
     fn lrange(
         stream: &mut TcpStream,
         redisDb: &mut RedisDb,
