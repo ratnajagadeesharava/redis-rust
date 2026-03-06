@@ -75,6 +75,7 @@ fn handle_stream(stream: &mut TcpStream) {
                     Resp::Integer(_) => todo!(),
                     Resp::BulkString(value) => {
                         if value == "PING" {
+                            println!("value");
                             stream.write_all(b"+PONG\r\n").unwrap();
                         }
                     }
