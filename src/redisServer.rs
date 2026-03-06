@@ -60,6 +60,7 @@ impl RedisServer {
 
             if let Some(obj) = redisDb.map.get(&key) {
                 if let DataType::STRING(val) = &obj.data {
+                    println!("pear {val}");
                     stream
                         .write_all(&parse_resp(Resp::BulkString(val.clone())))
                         .unwrap();
