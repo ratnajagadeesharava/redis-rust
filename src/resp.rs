@@ -25,7 +25,16 @@ pub fn parse_resp(value: Resp) -> Vec<u8> {
             let result = format!("${}\r\n{val}\r\n", val.len());
             result.into_bytes()
         }
-        Resp::Array(items) => todo!(),
+        Resp::Array(items) => {
+            let l = items.len();
+            let mut result:String = format!("*{l}\r\n");
+            for item in items{
+                let bytes = parse_resp(Resp::BulkString(item));
+                result += &String::from_utf8(bytes).unwrap();
+            }
+            result.into_bytes()
+
+        },
         Resp::Other(_) => todo!(),
     }
 }

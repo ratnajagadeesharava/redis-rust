@@ -86,4 +86,26 @@ impl List {
             None => None,
         }
     }
+    pub fn range(&self, start: usize, end: usize) -> Vec<String> {
+        let mut result = Vec::new();
+        let mut current = self.head.clone();
+        let mut index = 0;
+
+        while let Some(node) = current {
+            let node_ref = node.borrow();
+
+            if index >= start && index <= end {
+                result.push(node_ref.val.clone());
+            }
+
+            if index > end {
+                break;
+            }
+
+            current = node_ref.next.clone();
+            index += 1;
+        }
+
+        result
+    }
 }

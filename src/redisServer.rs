@@ -1,4 +1,5 @@
 use std::{
+    collections::btree_map::Keys,
     io::{Read, Write},
     net::TcpStream,
     os::unix::raw::pid_t,
@@ -26,9 +27,26 @@ impl RedisServer {
             RedisCommand::Echo(value) => Self::echo(stream, value),
             RedisCommand::Unkown => todo!(),
             RedisCommand::Ping => Self::ping(stream),
+            RedisCommand::LRANGE(key, start, end) => Self::lrange(stream, redisDb, key, start, end),
         }
     }
-
+    fn lrange(
+        stream: &mut TcpStream,
+        redisDb: &mut RedisDb,
+        key: String,
+        start: usize,
+        end: usize,
+    ) {
+        if redisDb.map.contains_key(&key) {
+            if let Some(obj) = redisDb.map.get_mut(&key) {
+                if let DataType::LIST(list) = &mut obj.data {
+                    let mut count =0;
+                    let values = list.range(start, end);
+                    stream.write_all(&parse_resp(Resp::Array(values))).unwrap();
+                }
+            }
+        }
+    }
     fn set_command(
         stream: &mut TcpStream,
         redisDb: &mut RedisDb,
@@ -120,7 +138,7 @@ impl RedisServer {
             let mut count = 0;
             for value in values {
                 list.push_back(value);
-                count+=1;
+                count += 1;
             }
             let obj = RedisObject {
                 data: DataType::LIST(list),
