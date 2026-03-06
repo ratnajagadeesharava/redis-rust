@@ -54,6 +54,7 @@ impl RedisServer {
                     }
                     println!("{} -- > {}  --- {}",s,e,count);
                     let values = list.range(s as usize, e as usize);
+                    println!("{:?}",values);
                     stream.write_all(&parse_resp(Resp::Array(values))).unwrap();
                 }
             }
