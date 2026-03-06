@@ -19,7 +19,7 @@ impl RedisServer {
             }
             RedisCommand::Get(key) => Self::get_command(stream, redisDb, key),
             RedisCommand::RPush(key, value) => Self::r_push(stream,redisDb,key,value),
-            RedisCommand::Echo(value) => todo!(),
+            RedisCommand::Echo(value) => Self::echo(stream, value),
             RedisCommand::Unkown => todo!(),
             RedisCommand::Ping => Self::ping(stream),
         }

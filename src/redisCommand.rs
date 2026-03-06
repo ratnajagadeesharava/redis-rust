@@ -11,7 +11,7 @@ use crate::{
     resp::{Resp, parse_resp},
 };
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub enum RedisCommand {
     Set(String, String, Option<u64>),
     Get(String),
@@ -45,13 +45,16 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
             }
             "GET" => redisCommand = RedisCommand::Get(command_array[index + 2].clone()),
             "PING" => redisCommand = RedisCommand::Ping,
-            "ECHO" => redisCommand = RedisCommand::Echo(command_array[index + 1].clone()),
-            "RPUSH"=>{
+            "ECHO" => {
                 index+=2;
-                let key =command_array[index].clone();
-                index+=2;
+                println!("{:?}",command_array[index]);
+                redisCommand = RedisCommand::Echo(command_array[index ].clone())},
+            "RPUSH" => {
+                index += 2;
+                let key = command_array[index].clone();
+                index += 2;
                 let value = command_array[index].clone();
-                redisCommand  = RedisCommand::RPush(key, value);
+                redisCommand = RedisCommand::RPush(key, value);
             }
             _ => {
                 index += 1;
@@ -60,6 +63,6 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
         }
         break;
     }
-    
+
     redisCommand
 }
