@@ -1,6 +1,6 @@
 #![allow(unused_imports)]
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
     f32::consts::E,
     io::{ErrorKind, Read, Write},
     net::{TcpListener, TcpStream},
@@ -55,6 +55,7 @@ fn parse_message(message: &str) -> Resp {
 
 fn handle_stream(stream: &mut TcpStream) {
     let mut buffer = [0; 1024];
+    let mut map:HashMap<&str,&str> = HashMap::new();
     match stream.read(&mut buffer) {
         Ok(bytes_read) => {
             if bytes_read != 0 {
@@ -88,6 +89,18 @@ fn handle_stream(stream: &mut TcpStream) {
                             stream.write_all(s.as_bytes()).unwrap();
                         } else if command == "PING" {
                             stream.write_all(b"+PONG\r\n").unwrap();
+                        }
+                        else if command == "SET"{
+                            map.insert(value[4], value[6]);
+                            stream.write_all(b"+OK\r\n").unwrap()
+                        }
+                        else if command == "GET"{
+                            if map.contains_key(value[4]){
+                                if let Some(val) = map.get(value[4]){
+                                    let s = format!("${}\r\n{}\r\n",val.len(),val);
+                                    stream.write_all(s.as_bytes()).unwrap();
+                                }
+                            }
                         }
                     }
                     Resp::Other(_) => todo!(),
