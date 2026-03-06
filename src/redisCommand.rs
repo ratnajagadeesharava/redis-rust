@@ -48,7 +48,7 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                 }
             }
             "LLEN"=> redisCommand = RedisCommand::LLEN(command_array[index + 2].clone()),
-            "LPOP"=>redisCommand = RedisCommand::LPOP(command_array[index + 2].clone())
+            "LPOP"=>redisCommand = RedisCommand::LPOP(command_array[index + 2].clone()),
             "GET" => redisCommand = RedisCommand::Get(command_array[index + 2].clone()),
             "PING" => redisCommand = RedisCommand::Ping,
             "ECHO" => {
