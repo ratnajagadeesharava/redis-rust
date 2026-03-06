@@ -54,7 +54,7 @@ impl List {
         self.count += 1;
         let new_node = Rc::new(RefCell::new(ListNode::new(val)));
 
-        match self.tail.take() {
+        match self.head.take() {
             Some(node) => {
                 node.borrow_mut().prev = Some(new_node.clone());
                 new_node.borrow_mut().next = Some(node.clone());
