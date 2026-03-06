@@ -22,7 +22,7 @@ pub fn parse_resp(value: Resp) -> Vec<u8> {
             result.into_bytes()
         },
         Resp::BulkString(val) => {
-            let result = format!("${}\r\n{val}", val.len());
+            let result = format!("${}\r\n{val}\r\n", val.len());
             result.into_bytes()
         }
         Resp::Array(items) => todo!(),
