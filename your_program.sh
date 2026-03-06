@@ -23,4 +23,5 @@ set -e # Exit early if any commands fail
 # - Edit .codecrafters/run.sh to change how your program runs remotely
 # exec /tmp/codecrafters-build-redis-rust/release/codecrafters-redis "$@"
 # printf "+PING\r\n" | nc 127.0.0.1 6379
-printf '*3\r\n$3\r\nSET\r\n$5\r\nmykey\r\n$5\r\nhello\r\n' | nc 127.0.0.1 6379
+# printf '*3\r\n$3\r\nSET\r\n$5\r\nmykey\r\n$5\r\nhello\r\n' | nc 127.0.0.1 6379
+printf "*5\r\n$3\r\nSET\r\n$5\r\nmykey\r\n$5\r\nhello\r\n$2\r\nPX\r\n$4\r\n5000\r\n" | nc 127.0.0.1 6379
