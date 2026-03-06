@@ -63,19 +63,18 @@ fn handle_stream(stream: &mut TcpStream) {
                 // if let Resp::Array(value) = resp{
 
                 // }
-                println!("{:?}", resp);
+                // println!("{:?}", resp);
                 match resp {
                     Resp::SimpleString(value) => {
-                         let count = message.matches("PING").count();
+                        let count = message.matches("PING").count();
                         for _ in 0..count {
                             stream.write_all(b"+PONG\r\n").unwrap();
                         }
-                    },
+                    }
                     Resp::Error(_) => todo!(),
                     Resp::Integer(_) => todo!(),
                     Resp::BulkString(value) => {
-                        let count = message.matches("PING").count();
-                        for _ in 0..count {
+                        if value == "PING" {
                             stream.write_all(b"+PONG\r\n").unwrap();
                         }
                     }
