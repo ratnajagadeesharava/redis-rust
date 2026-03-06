@@ -56,13 +56,28 @@ fn handle_stream(stream: &mut TcpStream) {
             if bytes_read != 0 {
                 let message = from_utf8(&buffer[..bytes_read]).unwrap();
                 let resp = parse_message(message);
-                if let Resp::Array(value) = resp{
-                    let l = value.len();
+                // if let Resp::Array(value) = resp{
+                    
+                // }
+                match resp{
+                    Resp::SimpleString(_) => todo!(),
+                    Resp::Error(_) => todo!(),
+                    Resp::Integer(_) => todo!(),
+                    Resp::BulkString(value) => {
+                        let count = message.matches("PING").count();
+                        for _ in 0..count {
+                            stream.write_all(b"+PONG\r\n").unwrap();
+                        }
+                    },
+                    Resp::Array(value) =>{
+                        let l = value.len();
                     let command = value[2];
                     if command == "ECHO"{
                         let s = format!("{}\r\n{}\r\n",value[3],value[4]);
                         stream.write_all(s.as_bytes());
                     }
+                    },
+                    Resp::Other(_) => todo!(),
                 }
               
             }
