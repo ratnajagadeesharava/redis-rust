@@ -28,11 +28,11 @@ pub fn parse_resp(value: Resp) -> Vec<u8> {
         Resp::Array(items) => {
             let l = items.len();
             let mut result:String = format!("*{l}\r\n");
+            println!("{:?}",items);
             for item in items{
                 let bytes = parse_resp(Resp::BulkString(item));
                 result += &String::from_utf8(bytes).unwrap();
             }
-            println!("{:?}",result);
             result.into_bytes()
 
         },
