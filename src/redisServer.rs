@@ -28,8 +28,10 @@ impl RedisServer {
             RedisCommand::Unkown => todo!(),
             RedisCommand::Ping => Self::ping(stream),
             RedisCommand::LRANGE(key, start, end) => Self::lrange(stream, redisDb, key, start, end),
+            RedisCommand::LPush(key, value) => Self::l_push(stream, redisDb, key, value),
         }
     }
+    
     fn lrange(
         stream: &mut TcpStream,
         redisDb: &mut RedisDb,
@@ -133,7 +135,33 @@ impl RedisServer {
             Err(_) => {}
         }
     }
-
+    pub fn l_push(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String, values: Vec<String>){
+        if redisDb.map.contains_key(&key) {
+            if let Some(obj) = redisDb.map.get_mut(&key) {
+                if let DataType::LIST(list) = &mut obj.data {
+                    for value in values {
+                        list.push_front(value);
+                    }
+                    stream
+                        .write_all(&parse_resp(Resp::Integer(list.count)))
+                        .unwrap()
+                }
+            }
+        } else {
+            let mut list = List::new();
+            let mut count = 0;
+            for value in values {
+                list.push_front(value);
+                count += 1;
+            }
+            let obj = RedisObject {
+                data: DataType::LIST(list),
+            };
+            redisDb.map.insert(key, obj);
+            stream.write_all(&parse_resp(Resp::Integer(count))).unwrap()
+        }
+    }
+    
     pub fn r_push(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String, values: Vec<String>) {
         if redisDb.map.contains_key(&key) {
             if let Some(obj) = redisDb.map.get_mut(&key) {
