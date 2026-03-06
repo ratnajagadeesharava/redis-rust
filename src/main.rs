@@ -95,6 +95,7 @@ fn handle_stream(stream: &mut TcpStream) {
                             stream.write_all(b"+OK\r\n").unwrap()
                         }
                         else if command == "GET"{
+                            println!("{:?}",map);
                             if map.contains_key(value[4]){
                                 if let Some(val) = map.get(value[4]){
                                     let s = format!("${}\r\n{}\r\n",val.len(),val);
