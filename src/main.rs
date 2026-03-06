@@ -63,7 +63,7 @@ fn handle_stream(stream: &mut TcpStream) {
                 // if let Resp::Array(value) = resp{
 
                 // }
-                // println!("{:?}", resp);
+                println!("{:?}", resp);
                 match resp {
                     Resp::SimpleString(value) => {
                         let count = message.matches("PING").count();
