@@ -73,7 +73,7 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                     values.push(command_array[i].clone());
                 }
 
-                redisCommand = RedisCommand::RPush(key, values);
+                redisCommand = RedisCommand::LPush(key, values);
             }
             "LRANGE"=>{
                 index+=2;
