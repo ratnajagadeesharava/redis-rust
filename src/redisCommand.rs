@@ -19,7 +19,7 @@ pub enum RedisCommand {
     RPush(String, Vec<String>),
     Echo(String),
     Unkown,
-    LRANGE(String,usize,usize)
+    LRANGE(String,i32,i32)
 }
 
 type CommandFn = fn();
@@ -66,9 +66,9 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                 index+=2;
                 let key = command_array[index].clone();
                 index+=2;
-                let start:usize = command_array[index].clone().parse().unwrap();
+                let start:i32 = command_array[index].clone().parse().unwrap();
                 index+=2;
-                let end:usize = command_array[index].clone().parse().unwrap();
+                let end:i32 = command_array[index].clone().parse().unwrap();
                 redisCommand = RedisCommand::LRANGE(key, start, end)
             }
             _ => {

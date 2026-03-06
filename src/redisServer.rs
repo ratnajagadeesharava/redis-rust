@@ -34,14 +34,23 @@ impl RedisServer {
         stream: &mut TcpStream,
         redisDb: &mut RedisDb,
         key: String,
-        start: usize,
-        end: usize,
+        start: i32,
+        end: i32,
     ) {
         if redisDb.map.contains_key(&key) {
             if let Some(obj) = redisDb.map.get_mut(&key) {
                 if let DataType::LIST(list) = &mut obj.data {
-                    let mut count =0;
-                    let values = list.range(start, end);
+                    
+                    let count = list.count;
+                    let mut s = start;
+                    let mut e =end;
+                    if start<0{
+                        s = count as i32 +start;
+                    }
+                    if end<0{
+                        e = count as i32 +end;
+                    }
+                    let values = list.range(s as usize, end as usize);
                     stream.write_all(&parse_resp(Resp::Array(values))).unwrap();
                 }
             }
