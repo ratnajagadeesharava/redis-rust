@@ -67,6 +67,26 @@ impl List {
         }
     }
 
+    pub fn pop_front(&mut self)-> Option<Rc<RefCell<ListNode>>>{
+        match self.head.take(){
+             Some(node) => {
+                match node.borrow_mut().next.clone() {
+                    Some(p) => {
+                        p.borrow_mut().prev = None;
+                        self.head = Some(p.clone());
+                    }
+                    None => {
+                        self.tail = None;
+                    }
+                }
+                node.borrow_mut().next = None;
+                self.count -= 1;
+                Some(node)
+            }
+            None => None,
+        }
+    }
+
     pub fn pop_back(&mut self) -> Option<Rc<RefCell<ListNode>>> {
         match self.tail.take() {
             Some(node) => {
