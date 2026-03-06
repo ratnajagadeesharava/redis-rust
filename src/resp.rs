@@ -32,6 +32,7 @@ pub fn parse_resp(value: Resp) -> Vec<u8> {
                 let bytes = parse_resp(Resp::BulkString(item));
                 result += &String::from_utf8(bytes).unwrap();
             }
+            println!("{:?}",result);
             result.into_bytes()
 
         },
