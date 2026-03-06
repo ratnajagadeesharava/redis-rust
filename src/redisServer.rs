@@ -51,7 +51,7 @@ impl RedisServer {
                         e = count as i32 +end;
                     }
                     println!("{} -- > {}",s,e);
-                    let values = list.range(s as usize, end as usize);
+                    let values = list.range(s as usize, e as usize);
                     stream.write_all(&parse_resp(Resp::Array(values))).unwrap();
                 }
             }
