@@ -53,18 +53,13 @@ fn parse_message(message: &str) -> Resp {
     }
 }
 
-fn handle_stream(stream: &mut TcpStream) {
+fn handle_stream(stream: &mut TcpStream,map:&mut HashMap<String,String>) {
     let mut buffer = [0; 1024];
-    let mut map:HashMap<&str,&str> = HashMap::new();
     match stream.read(&mut buffer) {
         Ok(bytes_read) => {
             if bytes_read != 0 {
                 let message = from_utf8(&buffer[..bytes_read]).unwrap();
                 let resp = parse_message(message);
-                // if let Resp::Array(value) = resp{
-
-                // }
-                // println!("{:?}", resp);
                 match resp {
                     Resp::SimpleString(value) => {
                         let count = message.matches("PING").count();
@@ -91,7 +86,7 @@ fn handle_stream(stream: &mut TcpStream) {
                             stream.write_all(b"+PONG\r\n").unwrap();
                         }
                         else if command == "SET"{
-                            map.insert(value[4], value[6]);
+                            map.insert(value[4].to_string(), value[6].to_string());
                             println!("{:?}",map);
                             stream.write_all(b"+OK\r\n").unwrap()
                         }
@@ -119,7 +114,7 @@ enum Command {
 }
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
-    let mut clients = Vec::<TcpStream>::new();
+    let mut clients = Vec::<(TcpStream,HashMap<String,String>)>::new();
 
     listener
         .set_nonblocking(true)
@@ -128,12 +123,12 @@ fn main() {
         match listener.accept() {
             Ok((stream, _)) => {
                 stream.set_nonblocking(true).unwrap();
-                clients.push(stream);
+                clients.push((stream,HashMap::new()));
             }
             Err(_) => {}
         }
         for _stream in &mut clients {
-            handle_stream(_stream);
+            handle_stream(&mut _stream.0,&mut _stream.1);
         }
     }
 }
