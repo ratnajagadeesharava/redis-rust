@@ -6,4 +6,5 @@ pub enum DataType{
 }
 pub struct RedisObject{
     pub data:DataType,
+
 }

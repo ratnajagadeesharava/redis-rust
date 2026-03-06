@@ -7,10 +7,7 @@ use std::{
 };
 
 use crate::{
-    redisCommand::{RedisCommand, array_to_command},
-    redisDb::RedisDb,
-    redisObject::{DataType, RedisObject},
-    resp::{Resp, parse_message, parse_resp},
+    list::List, redisCommand::{RedisCommand, array_to_command}, redisDb::RedisDb, redisObject::{DataType, RedisObject}, resp::{Resp, parse_message, parse_resp}
 };
 
 pub struct RedisServer;
@@ -21,7 +18,7 @@ impl RedisServer {
                 Self::set_command(stream, redisDb, key, value, ttl)
             }
             RedisCommand::Get(key) => Self::get_command(stream, redisDb, key),
-            RedisCommand::RPush(_, _) => todo!(),
+            RedisCommand::RPush(key, value) => Self::r_push(stream,redisDb,key,value),
             RedisCommand::Echo(value) => todo!(),
             RedisCommand::Unkown => todo!(),
             RedisCommand::Ping => Self::ping(stream),
@@ -100,4 +97,28 @@ impl RedisServer {
             Err(_) => {}
         }
     }
+
+    pub fn r_push( stream: &mut TcpStream,
+        redisDb: &mut RedisDb,
+        key: String,
+        value: String){
+            if redisDb.map.contains_key(&key){
+
+                if let Some(obj) = redisDb.map.get_mut(&key) {
+                    if let DataType::LIST(list) = &mut obj.data{
+                        list.push_back(value);
+                    }
+                }
+            }
+            else{
+                let mut  list = List::new();
+                list.push_back(value);
+                let obj = RedisObject{
+                    data:DataType::LIST(list)
+                };
+                redisDb.map.insert(key, obj);
+            }
+            
+            stream.write_all(&parse_resp(Resp::SimpleString(String::from("PONG")))).unwrap()
+        }
 }

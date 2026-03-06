@@ -46,6 +46,13 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
             "GET" => redisCommand = RedisCommand::Get(command_array[index + 1].clone()),
             "PING" => redisCommand = RedisCommand::Ping,
             "ECHO" => redisCommand = RedisCommand::Echo(command_array[index + 1].clone()),
+            "RPUSH"=>{
+                index+=2;
+                let key =command_array[index].clone();
+                index+=2;
+                let value = command_array[index].clone();
+                redisCommand  = RedisCommand::RPush(key, value);
+            }
             _ => {
                 index += 1;
                 continue;
