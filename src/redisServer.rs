@@ -46,6 +46,9 @@ impl RedisServer {
                 }
             }
         }
+        else{
+            stream.write_all(&parse_resp(Resp::Array(vec![]))).unwrap()
+        }
     }
     fn set_command(
         stream: &mut TcpStream,
