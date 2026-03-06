@@ -16,7 +16,7 @@ pub enum RedisCommand {
     Set(String, String, Option<u64>),
     Get(String),
     Ping,
-    RPush(String, String),
+    RPush(String, Vec<String>),
     Echo(String),
     Unkown,
 }
@@ -52,9 +52,13 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
             "RPUSH" => {
                 index += 2;
                 let key = command_array[index].clone();
+                let mut values = Vec::<String>::new();
                 index += 2;
-                let value = command_array[index].clone();
-                redisCommand = RedisCommand::RPush(key, value);
+                for i in (index..n).step_by(2){
+                    values.push(command_array[index].clone());
+                }
+
+                // redisCommand = RedisCommand::RPush(key, value);
             }
             _ => {
                 index += 1;

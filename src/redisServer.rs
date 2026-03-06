@@ -102,19 +102,23 @@ impl RedisServer {
     pub fn r_push( stream: &mut TcpStream,
         redisDb: &mut RedisDb,
         key: String,
-        value: String){
+        values: Vec<String>){
             if redisDb.map.contains_key(&key){
 
                 if let Some(obj) = redisDb.map.get_mut(&key) {
                     if let DataType::LIST(list) = &mut obj.data{
-                        list.push_back(value);
+                        for value in values{
+                            list.push_back(value);
+                        }
                         stream.write_all(&parse_resp(Resp::Integer(list.count))).unwrap()
                     }
                 }
             }
             else{
                 let mut  list = List::new();
+                for value in values{
                 list.push_back(value);
+                }
                 let obj = RedisObject{
                     data:DataType::LIST(list)
                 };
