@@ -94,7 +94,7 @@ impl List {
         while let Some(node) = current {
             let value = node.borrow_mut().val.clone();
             let next = node.borrow_mut().next.clone();
-            println!("{value}");
+            
             if index >= start && index <= end {
                 result.push(value);
             }
