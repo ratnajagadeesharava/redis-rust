@@ -152,6 +152,7 @@ impl RedisServer {
         } else {
             let mut list = List::new();
             let mut count = 0;
+            println!("order given{:?}",values);
             for value in values {
                 list.push_front(value);
                 count += 1;
