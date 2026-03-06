@@ -45,7 +45,7 @@ impl RedisServer {
                     let mut s = start;
                     let mut e =end;
                     if start<0{
-                        s = count as i32 +start;
+                        s = (count as i32 +start).max(0);
                     }
                     if end<0{
                         e = count as i32 +end;
