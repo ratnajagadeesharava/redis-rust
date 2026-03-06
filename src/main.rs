@@ -63,7 +63,7 @@ fn handle_stream(stream: &mut TcpStream) {
                 // if let Resp::Array(value) = resp{
 
                 // }
-                println!("{:?}", resp);
+                // println!("{:?}", resp);
                 match resp {
                     Resp::SimpleString(value) => {
                         let count = message.matches("PING").count();
@@ -86,6 +86,8 @@ fn handle_stream(stream: &mut TcpStream) {
                         if command == "ECHO" {
                             let s = format!("{}\r\n{}\r\n", value[3], value[4]);
                             stream.write_all(s.as_bytes()).unwrap();
+                        } else if command == "PING" {
+                            stream.write_all(b"+PONG\r\n").unwrap();
                         }
                     }
                     Resp::Other(_) => todo!(),
