@@ -107,6 +107,7 @@ impl RedisServer {
                 if let Some(obj) = redisDb.map.get_mut(&key) {
                     if let DataType::LIST(list) = &mut obj.data{
                         list.push_back(value);
+                        stream.write_all(&parse_resp(Resp::Integer(list.count))).unwrap()
                     }
                 }
             }
@@ -117,8 +118,8 @@ impl RedisServer {
                     data:DataType::LIST(list)
                 };
                 redisDb.map.insert(key, obj);
+                stream.write_all(&parse_resp(Resp::Integer(1))).unwrap()
             }
             
-            stream.write_all(&parse_resp(Resp::SimpleString(String::from("PONG")))).unwrap()
         }
 }

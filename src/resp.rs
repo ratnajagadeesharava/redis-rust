@@ -17,7 +17,10 @@ pub fn parse_resp(value: Resp) -> Vec<u8> {
             result.into_bytes()
         }
         Resp::Error(_) => todo!(),
-        Resp::Integer(_) => todo!(),
+        Resp::Integer(val) =>{
+            let result = format!(":{val}\r\n");
+            result.into_bytes()
+        },
         Resp::BulkString(val) => {
             let result = format!("${}\r\n{val}", val.len());
             result.into_bytes()
