@@ -27,3 +27,4 @@ set -e # Exit early if any commands fail
 # printf '*5\r\n$3\r\nSET\r\n$5\r\nmykey\r\n$5\r\nhello\r\n$2\r\nPX\r\n$4\r\n5000\r\n' | nc 127.0.0.1 6379
 # printf '*5\r\n$3\r\nSET\r\n$6\r\norange\r\n$5\r\ngrape\r\n$2\r\nPX\r\n$3\r\n100\r\n' | nc 127.0.0.1 6379
 # printf '*2\r\n$4\r\nECHO\r\n$4\r\npear\r\n' | nc 127.0.0.1 6379
+printf '*4\r\n$5\r\nRPUSH\r\n$9\r\nraspberry\r\n$6\r\nbanana\r\n$4\r\npear\r\n' | nc 127.0.0.1 6379

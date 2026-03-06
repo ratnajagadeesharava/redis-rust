@@ -117,14 +117,16 @@ impl RedisServer {
             }
         } else {
             let mut list = List::new();
+            let mut count = 0;
             for value in values {
                 list.push_back(value);
+                count+=1;
             }
             let obj = RedisObject {
                 data: DataType::LIST(list),
             };
             redisDb.map.insert(key, obj);
-            stream.write_all(&parse_resp(Resp::Integer(1))).unwrap()
+            stream.write_all(&parse_resp(Resp::Integer(count))).unwrap()
         }
     }
 }

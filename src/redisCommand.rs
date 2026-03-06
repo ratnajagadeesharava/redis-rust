@@ -51,6 +51,7 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                 redisCommand = RedisCommand::Echo(command_array[index ].clone())},
             "RPUSH" => {
                 index += 2;
+                // println!("{}",command_array[index]);
                 let key = command_array[index].clone();
                 let mut values = Vec::<String>::new();
                 index += 2;
@@ -58,7 +59,7 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                     values.push(command_array[index].clone());
                 }
 
-                // redisCommand = RedisCommand::RPush(key, value);
+                redisCommand = RedisCommand::RPush(key, values);
             }
             _ => {
                 index += 1;
