@@ -50,7 +50,7 @@ impl RedisServer {
                     if end<0{
                         e = count as i32 +end;
                     }
-                    println!("{} -- > {}",s,e);
+                    println!("{} -- > {}  --- {}",s,e,count);
                     let values = list.range(s as usize, e as usize);
                     stream.write_all(&parse_resp(Resp::Array(values))).unwrap();
                 }
