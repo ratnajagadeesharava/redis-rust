@@ -137,7 +137,7 @@ impl RedisServer {
         }
     }
     pub fn l_push(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String, values: Vec<String>){
-        println!("lpushe");
+        println!("lpush");
         if redisDb.map.contains_key(&key) {
             if let Some(obj) = redisDb.map.get_mut(&key) {
                 if let DataType::LIST(list) = &mut obj.data {
@@ -167,6 +167,7 @@ impl RedisServer {
     }
     
     pub fn r_push(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String, values: Vec<String>) {
+        println!("rpush");
         if redisDb.map.contains_key(&key) {
             if let Some(obj) = redisDb.map.get_mut(&key) {
                 if let DataType::LIST(list) = &mut obj.data {
