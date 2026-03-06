@@ -7,7 +7,11 @@ use std::{
 };
 
 use crate::{
-    list::List, redisCommand::{RedisCommand, array_to_command}, redisDb::RedisDb, redisObject::{DataType, RedisObject}, resp::{Resp, parse_message, parse_resp}
+    list::List,
+    redisCommand::{RedisCommand, array_to_command},
+    redisDb::RedisDb,
+    redisObject::{DataType, RedisObject},
+    resp::{Resp, parse_message, parse_resp},
 };
 
 pub struct RedisServer;
@@ -18,7 +22,7 @@ impl RedisServer {
                 Self::set_command(stream, redisDb, key, value, ttl)
             }
             RedisCommand::Get(key) => Self::get_command(stream, redisDb, key),
-            RedisCommand::RPush(key, value) => Self::r_push(stream,redisDb,key,value),
+            RedisCommand::RPush(key, value) => Self::r_push(stream, redisDb, key, value),
             RedisCommand::Echo(value) => Self::echo(stream, value),
             RedisCommand::Unkown => todo!(),
             RedisCommand::Ping => Self::ping(stream),
@@ -85,12 +89,12 @@ impl RedisServer {
                     // println!("{:?}",message);
                     if let Resp::Array(arr) = parse_message(message) {
                         let array_iter = arr.into_iter();
-                        println!("{:?}",message);
+                        println!("{:?}", message);
                         let command_array: Vec<String> =
                             array_iter.filter(|val: &String| val.len() != 0).collect();
-                            println!("{:?}",command_array);
+                        println!("{:?}", command_array);
                         let redisCommnad = array_to_command(&command_array);
-                        
+
                         Self::execute(redisCommnad, redisDb, stream);
                     }
                 }
@@ -99,32 +103,28 @@ impl RedisServer {
         }
     }
 
-    pub fn r_push( stream: &mut TcpStream,
-        redisDb: &mut RedisDb,
-        key: String,
-        values: Vec<String>){
-            if redisDb.map.contains_key(&key){
-
-                if let Some(obj) = redisDb.map.get_mut(&key) {
-                    if let DataType::LIST(list) = &mut obj.data{
-                        for value in values{
-                            list.push_back(value);
-                        }
-                        stream.write_all(&parse_resp(Resp::Integer(list.count))).unwrap()
+    pub fn r_push(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String, values: Vec<String>) {
+        if redisDb.map.contains_key(&key) {
+            if let Some(obj) = redisDb.map.get_mut(&key) {
+                if let DataType::LIST(list) = &mut obj.data {
+                    for value in values {
+                        list.push_back(value);
                     }
+                    stream
+                        .write_all(&parse_resp(Resp::Integer(list.count)))
+                        .unwrap()
                 }
             }
-            else{
-                let mut  list = List::new();
-                for value in values{
+        } else {
+            let mut list = List::new();
+            for value in values {
                 list.push_back(value);
-                }
-                let obj = RedisObject{
-                    data:DataType::LIST(list)
-                };
-                redisDb.map.insert(key, obj);
-                stream.write_all(&parse_resp(Resp::Integer(1))).unwrap()
             }
-            
+            let obj = RedisObject {
+                data: DataType::LIST(list),
+            };
+            redisDb.map.insert(key, obj);
+            stream.write_all(&parse_resp(Resp::Integer(1))).unwrap()
         }
+    }
 }
