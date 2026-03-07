@@ -45,7 +45,7 @@ fn main() {
         .expect("non blocking is not possible");
 
     let mut client_id: ClientId = 0;
-
+println!("client Id{client_id}");
     loop {
         match listener.accept() {
             Ok((stream, _)) => {
@@ -58,7 +58,7 @@ fn main() {
                 };
                 server.client_map.insert(client_id, client);
                 clients.push(client_id);
-                println!("client Id{client_id}");
+                
                 client_id += client_id;
             }
             Err(_) => {}
