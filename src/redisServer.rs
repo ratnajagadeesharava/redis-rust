@@ -60,6 +60,11 @@ impl RedisServer {
                             println!("blocked {clientId}");
                             client.blocked = true;
                             client.waiting_key = Some(key);
+                            client.waiting_time = if timeout == 0 {
+                                None
+                            } else {
+                                Some(SystemTime::now() + Duration::from_secs(timeout as u64))
+                            };
                         }
                     }
                 }
@@ -73,6 +78,11 @@ impl RedisServer {
             println!("blocked {clientId}");
             client.blocked = true;
             client.waiting_key = Some(key);
+            client.waiting_time = if timeout == 0 {
+                None
+            } else {
+                Some(SystemTime::now() + Duration::from_secs(timeout as u64))
+            };
         }
     }
 
@@ -258,33 +268,47 @@ impl RedisServer {
             }
         }
     }
-    fn check_blocked(&mut self,key: &String,values:&Vec<String>,current_client_id:ClientId)->bool{
-       if self.redis_db.blocked.contains_key(key){
-        return match self.redis_db.blocked.get_mut(key).unwrap().pop_front(){
-            Some(clientId) =>{
-                let client =self.client_map.get_mut(&clientId).unwrap();
-                client.blocked = false;
-                client.waiting_key = None;
-                let mut result = Vec::<String>::new();
-                result.push(key.clone());
-                result.push(values[0].clone());
-                client.stream.borrow_mut().write_all(&parse_resp(Resp::Array(result))).unwrap();
-                println!("unblocked ting tong");
-                let current_client = self.client_map.get_mut(&current_client_id).unwrap();
-                 current_client.stream.borrow_mut().write_all(&parse_resp(Resp::Integer(1))).unwrap();
-                true
-            },
-            None => false,
+    fn check_blocked(
+        &mut self,
+        key: &String,
+        values: &Vec<String>,
+        current_client_id: ClientId,
+    ) -> bool {
+        if self.redis_db.blocked.contains_key(key) {
+            return match self.redis_db.blocked.get_mut(key).unwrap().pop_front() {
+                Some(clientId) => {
+                    let client = self.client_map.get_mut(&clientId).unwrap();
+                    client.blocked = false;
+                    client.waiting_key = None;
+                    client.waiting_time = None;
+                    let mut result = Vec::<String>::new();
+                    result.push(key.clone());
+                    result.push(values[0].clone());
+                    client
+                        .stream
+                        .borrow_mut()
+                        .write_all(&parse_resp(Resp::Array(result)))
+                        .unwrap();
+                    println!("unblocked ting tong");
+                    let current_client = self.client_map.get_mut(&current_client_id).unwrap();
+                    current_client
+                        .stream
+                        .borrow_mut()
+                        .write_all(&parse_resp(Resp::Integer(1)))
+                        .unwrap();
+                    true
+                }
+                None => false,
+            };
         }
-        
-       }{
-        return false;
-       }
+        {
+            return false;
+        }
     }
     pub fn l_push(&mut self, clientId: ClientId, key: String, values: Vec<String>) {
-       if self.check_blocked(&key, &values,clientId){
-        return ;
-       }
+        if self.check_blocked(&key, &values, clientId) {
+            return;
+        }
         let client = self.client_map.get(&clientId).unwrap();
         if self.redis_db.map.contains_key(&key) {
             if let Some(obj) = self.redis_db.map.get_mut(&key) {
@@ -321,9 +345,9 @@ impl RedisServer {
     }
 
     pub fn r_push(&mut self, clientId: ClientId, key: String, values: Vec<String>) {
-        if self.check_blocked(&key, &values,clientId){
-        return ;
-       }
+        if self.check_blocked(&key, &values, clientId) {
+            return;
+        }
         println!("rpush");
         let client = self.client_map.get(&clientId).unwrap();
         if self.redis_db.map.contains_key(&key) {
