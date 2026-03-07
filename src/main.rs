@@ -58,6 +58,7 @@ fn main() {
                 };
                 server.client_map.insert(client_id, client);
                 clients.push(client_id);
+                println!("client Id{client_id}");
                 client_id += client_id;
             }
             Err(_) => {}
