@@ -265,7 +265,10 @@ impl RedisServer {
                 let client =self.client_map.get_mut(&clientId).unwrap();
                 client.blocked = false;
                 client.waiting_key = None;
-                client.stream.borrow_mut().write_all(&parse_resp(Resp::BulkString(values[0].clone()))).unwrap();
+                let mut result = Vec::<String>::new();
+                result.push(key.clone());
+                result.push(values[0].clone());
+                client.stream.borrow_mut().write_all(&parse_resp(Resp::Array(result))).unwrap();
                 println!("unblocked ting tong");
                 let current_client = self.client_map.get_mut(&current_client_id).unwrap();
                  current_client.stream.borrow_mut().write_all(&parse_resp(Resp::Integer(1))).unwrap();
