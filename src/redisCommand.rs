@@ -104,6 +104,7 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                 redisCommand = RedisCommand::LRANGE(key, start, end);
             }
             "BLPOP " => {
+                println!("BLPOP{:?}",command_array);
                 index+=2;
                 let key = command_array[index].clone();
                 index+=2;
