@@ -35,7 +35,7 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
     let mut redisCommand = RedisCommand::Unkown;
     loop {
         let cmd = &command_array[index];
-        println!("BLPOP{:?}",command_array);
+        
         match cmd.as_str() {
             "SET" => {
                 index += 2;

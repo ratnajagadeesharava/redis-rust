@@ -250,7 +250,7 @@ impl RedisServer {
                 println!("{:?}", message);
                 let command_array: Vec<String> =
                     array_iter.filter(|val: &String| val.len() != 0).collect();
-                println!("{:?}", command_array);
+                println!("actual commands {:?}", command_array);
                 let redisCommnad = array_to_command(&command_array);
                 self.execute(redisCommnad, clientId);
             }
