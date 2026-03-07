@@ -57,6 +57,7 @@ impl RedisServer {
                                 .entry(key.clone())
                                 .or_insert(VecDeque::new())
                                 .push_back(clientId);
+                            println!("blocked {clientId}");
                             client.blocked = true;
                             client.waiting_key = Some(key);
                         }
@@ -69,6 +70,7 @@ impl RedisServer {
                 .entry(key.clone())
                 .or_insert(VecDeque::new())
                 .push_back(clientId);
+            println!("blocked {clientId}");
             client.blocked = true;
             client.waiting_key = Some(key);
         }
