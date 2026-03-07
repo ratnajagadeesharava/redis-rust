@@ -44,19 +44,25 @@ impl RedisServer {
                             Some(node) => {
                                 let val = node.borrow_mut().val.clone();
                                 popped_items.push(val);
-                                
                             }
                             None => {
                                 // stream.write(b"$-1\r\n").unwrap();
                                 break;
                             }
                         }
-                        count-=1;
+                        count -= 1;
                     }
-                    stream
-                                    .write_all(&parse_resp(Resp::Array(popped_items)))
-                                    .unwrap()
-                }
+                    if popped_items.len() > 1 {
+                        stream
+                            .write_all(&parse_resp(Resp::Array(popped_items)))
+                            .unwrap()
+                    } else {
+                        if popped_items.len()==1{
+                        stream.write_all(&parse_resp(Resp::BulkString(popped_items[0].clone()))).unwrap();
+                        }else{
+                            stream.write(b"$-1\r\n").unwrap();
+                        }
+                    }
             }
         } else {
             stream.write(b"$-1\r\n").unwrap();

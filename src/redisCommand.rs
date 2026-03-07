@@ -19,10 +19,10 @@ pub enum RedisCommand {
     RPush(String, Vec<String>),
     Echo(String),
     Unkown,
-    LRANGE(String,i32,i32),
-     LPush(String, Vec<String>),
-     LLEN (String),
-     LPOP(String,i32)
+    LRANGE(String, i32, i32),
+    LPush(String, Vec<String>),
+    LLEN(String),
+    LPOP(String, i32),
 }
 
 type CommandFn = fn();
@@ -47,30 +47,31 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                     redisCommand = RedisCommand::Set(key, value, None);
                 }
             }
-            "LLEN"=> redisCommand = RedisCommand::LLEN(command_array[index + 2].clone()),
-            "LPOP"=>{
-                // let count = 
+            "LLEN" => redisCommand = RedisCommand::LLEN(command_array[index + 2].clone()),
+            "LPOP" => {
+                // let count =
                 let key = command_array[index + 2].clone();
                 let mut count = 1;
-                index +=2;
-                if index+2<n{
-                    count = command_array[index+2].clone().parse::<i32>().unwrap();
+                index += 2;
+                if index + 2 < n {
+                    count = command_array[index + 2].clone().parse::<i32>().unwrap();
                 }
-                redisCommand = RedisCommand::LPOP(key,count);
-            },
+                redisCommand = RedisCommand::LPOP(key, count);
+            }
             "GET" => redisCommand = RedisCommand::Get(command_array[index + 2].clone()),
             "PING" => redisCommand = RedisCommand::Ping,
             "ECHO" => {
-                index+=2;
-                println!("{:?}",command_array[index]);
-                redisCommand = RedisCommand::Echo(command_array[index ].clone())},
+                index += 2;
+                println!("{:?}", command_array[index]);
+                redisCommand = RedisCommand::Echo(command_array[index].clone())
+            }
             "RPUSH" => {
                 index += 2;
                 // println!("{}",command_array[index]);
                 let key = command_array[index].clone();
                 let mut values = Vec::<String>::new();
                 index += 2;
-                for i in (index..n).step_by(2){
+                for i in (index..n).step_by(2) {
                     values.push(command_array[i].clone());
                 }
 
@@ -82,19 +83,19 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                 let key = command_array[index].clone();
                 let mut values = Vec::<String>::new();
                 index += 2;
-                for i in (index..n).step_by(2){
+                for i in (index..n).step_by(2) {
                     values.push(command_array[i].clone());
                 }
 
                 redisCommand = RedisCommand::LPush(key, values);
             }
-            "LRANGE"=>{
-                index+=2;
+            "LRANGE" => {
+                index += 2;
                 let key = command_array[index].clone();
-                index+=2;
-                let start:i32 = command_array[index].clone().parse().unwrap();
-                index+=2;
-                let end:i32 = command_array[index].clone().parse().unwrap();
+                index += 2;
+                let start: i32 = command_array[index].clone().parse().unwrap();
+                index += 2;
+                let end: i32 = command_array[index].clone().parse().unwrap();
                 redisCommand = RedisCommand::LRANGE(key, start, end)
             }
             _ => {
