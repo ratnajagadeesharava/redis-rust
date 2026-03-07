@@ -109,9 +109,9 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                 index+=2;
                 let key = command_array[index].clone();
                 index+=2;
-                let timeout = command_array[index].clone().parse::<i32>().unwrap();
-                
-                redisCommand = RedisCommand::BLPOP(key, timeout)
+                let mut  timeout = command_array[index].clone().parse::<f64>().unwrap();
+                timeout = timeout * 1000 as f64;
+                redisCommand = RedisCommand::BLPOP(key, timeout as i32)
                 
             }
             _ => {
