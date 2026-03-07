@@ -256,7 +256,7 @@ impl RedisServer {
             }
         }
     }
-    fn check_blocked(&mut self,key: &String,values:Vec<String>)->bool{
+    fn check_blocked(&mut self,key: &String,values:&Vec<String>)->bool{
        if self.redis_db.blocked.contains_key(key){
         return match self.redis_db.blocked.get_mut(key).unwrap().pop_front(){
             Some(clientId) =>{
@@ -274,7 +274,7 @@ impl RedisServer {
        }
     }
     pub fn l_push(&mut self, clientId: ClientId, key: String, values: Vec<String>) {
-       if self.check_blocked(&key, values){
+       if self.check_blocked(&key, &values){
         return ;
        }
         let client = self.client_map.get(&clientId).unwrap();
@@ -313,7 +313,7 @@ impl RedisServer {
     }
 
     pub fn r_push(&mut self, clientId: ClientId, key: String, values: Vec<String>) {
-        if self.check_blocked(&key, values){
+        if self.check_blocked(&key, &values){
         return ;
        }
         println!("rpush");
