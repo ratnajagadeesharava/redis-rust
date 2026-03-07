@@ -24,7 +24,8 @@ pub enum RedisCommand {
     LPush(String, Vec<String>),
     LLEN(String),
     LPOP(String, i32),
-    BLPOP (String,i32)
+    BLPOP (String,i32),
+    TYPE(String)
 }
 
 type CommandFn = fn();
@@ -113,6 +114,11 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                 timeout = timeout * 1000 as f64;
                 redisCommand = RedisCommand::BLPOP(key, timeout as i32)
                 
+            }
+            "TYPE"=>{
+                index+=2;
+                let key = command_array[index].clone();
+                redisCommand = RedisCommand::TYPE(key);
             }
             _ => {
                 index += 1;

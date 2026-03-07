@@ -34,9 +34,34 @@ impl RedisServer {
             RedisCommand::LLEN(key) => self.list_length(clientId, key),
             RedisCommand::LPOP(key, count) => self.left_pop(clientId, key, count),
             RedisCommand::BLPOP(key, timeout) => self.blocked_pop(clientId, key, timeout),
+            RedisCommand::TYPE(key) => self.find_type(clientId, key),
         }
     }
 
+    fn write_to_client(&mut self, clientId: ClientId, val: Resp) {
+        let client = self.client_map.get_mut(&clientId).unwrap();
+        client
+            .stream
+            .borrow_mut()
+            .write_all(&parse_resp(val))
+            .unwrap();
+    }
+     
+    fn find_type(&mut self, clientId: ClientId, key: String) {
+        match self.redis_db.map.get_mut(&key) {
+            Some(obj) => match &obj.data {
+                DataType::STRING(_) => {
+                    self.write_to_client(clientId, Resp::SimpleString("string".to_string()));
+                }
+                DataType::LIST(list) => {
+                    self.write_to_client(clientId, Resp::SimpleString("list".to_string()));
+                }
+            },
+            None => {
+                self.write_to_client(clientId, Resp::SimpleString("none".to_string()));
+            }
+        }
+    }
     fn blocked_pop(&mut self, clientId: ClientId, key: String, timeout: i32) {
         let client = self.client_map.get_mut(&clientId).unwrap();
         if self.redis_db.map.contains_key(&key) {
