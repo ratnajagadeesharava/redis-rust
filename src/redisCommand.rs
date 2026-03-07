@@ -70,12 +70,10 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
             }
             "ECHO" => {
                 index += 2;
-                println!("{:?}", command_array[index]);
                 redisCommand = RedisCommand::Echo(command_array[index].clone());
             }
             "RPUSH" => {
                 index += 2;
-                // println!("{}",command_array[index]);
                 let key = command_array[index].clone();
                 let mut values = Vec::<String>::new();
                 index += 2;
@@ -87,7 +85,6 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
             }
             "LPUSH" => {
                 index += 2;
-                // println!("{}",command_array[index]);
                 let key = command_array[index].clone();
                 let mut values = Vec::<String>::new();
                 index += 2;
@@ -111,13 +108,16 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                 let key = command_array[index].clone();
                 index+=2;
                 let timeout = command_array[index].clone().parse::<i32>().unwrap();
+                
                 redisCommand = RedisCommand::BLPOP(key, timeout)
+                
             }
             _ => {
                 index += 1;
                 continue;
             }
         }
+        println!("{:?}",redisCommand);
         break;
     }
 
