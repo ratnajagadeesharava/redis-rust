@@ -68,6 +68,7 @@ impl RedisServer {
             stream.write(b"$-1\r\n").unwrap();
         }
     }
+}
     fn list_length(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String) {
         if redisDb.map.contains_key(&key) {
             if let Some(obj) = redisDb.map.get_mut(&key) {
