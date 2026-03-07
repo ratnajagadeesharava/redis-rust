@@ -63,7 +63,7 @@ impl RedisServer {
                             client.waiting_time = if timeout == 0 {
                                 None
                             } else {
-                                Some(SystemTime::now() + Duration::from_secs(timeout as u64))
+                                Some(SystemTime::now() + Duration::from_millis(timeout as u64))
                             };
                         }
                     }
@@ -81,7 +81,7 @@ impl RedisServer {
             client.waiting_time = if timeout == 0 {
                 None
             } else {
-                Some(SystemTime::now() + Duration::from_secs(timeout as u64))
+                Some(SystemTime::now() + Duration::from_millis(timeout as u64))
             };
         }
     }
