@@ -30,25 +30,33 @@ impl RedisServer {
             RedisCommand::LRANGE(key, start, end) => Self::lrange(stream, redisDb, key, start, end),
             RedisCommand::LPush(key, value) => Self::l_push(stream, redisDb, key, value),
             RedisCommand::LLEN(key) => Self::list_length(stream, redisDb, key),
-            RedisCommand::LPOP(key) => Self::left_pop(stream, redisDb, key),
+            RedisCommand::LPOP(key, count) => Self::left_pop(stream, redisDb, key, count),
         }
     }
-    fn left_pop(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String) {
-          if redisDb.map.contains_key(&key) {
+    fn left_pop(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String, count: i32) {
+        if redisDb.map.contains_key(&key) {
             if let Some(obj) = redisDb.map.get_mut(&key) {
                 if let DataType::LIST(list) = &mut obj.data {
-                    let count = list.count;
-                    match list.pop_front(){
-                        Some(node) => {
-                            let val = node.borrow_mut().val.clone();
-                            stream.write_all(&parse_resp(Resp::BulkString(val))).unwrap()
-                        },
-                        None => {
-                            stream.write(b"$-1\r\n").unwrap();
-                        },
+                    let mut popped_items = Vec::<String>::new();
+                    let mut count = count;
+                    while count != 0 {
+                        match list.pop_front() {
+                            Some(node) => {
+                                let val = node.borrow_mut().val.clone();
+                                popped_items.push(val);
+                                
+                            }
+                            None => {
+                                // stream.write(b"$-1\r\n").unwrap();
+                                break;
+                            }
+                        }
+                        count-=1;
                     }
+                    stream
+                                    .write_all(&parse_resp(Resp::Array(popped_items)))
+                                    .unwrap()
                 }
-                
             }
         } else {
             stream.write(b"$-1\r\n").unwrap();
