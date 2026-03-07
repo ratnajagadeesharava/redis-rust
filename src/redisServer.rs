@@ -264,6 +264,7 @@ impl RedisServer {
                 client.blocked = false;
                 client.waiting_key = None;
                 client.stream.borrow_mut().write_all(&parse_resp(Resp::BulkString(values[0].clone()))).unwrap();
+                println!("unblocked ting tong");
                 true
             },
             None => false,
