@@ -1,4 +1,5 @@
 #![allow(unused_imports)]
+#![allow(warnings)]
 #![allow(unused_variables)]
 #![allow(unused_mut)]
 mod client;
