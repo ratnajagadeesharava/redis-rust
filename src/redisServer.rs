@@ -1,13 +1,13 @@
 use std::{
-    collections::btree_map::Keys,
+    collections::{HashMap, VecDeque, btree_map::Keys},
     io::{Read, Write},
     net::TcpStream,
-    os::unix::raw::pid_t,
     str::from_utf8,
     time::{Duration, SystemTime},
 };
 
 use crate::{
+    client::{self, Client, ClientId},
     list::List,
     redisCommand::{RedisCommand, array_to_command},
     redisDb::RedisDb,
@@ -15,27 +15,69 @@ use crate::{
     resp::{Resp, parse_message, parse_resp},
 };
 
-pub struct RedisServer;
+pub struct RedisServer {
+    pub client_map: HashMap<usize, Client>,
+    pub redis_db: RedisDb,
+}
+
 impl RedisServer {
-    pub fn execute(cmd: RedisCommand, redisDb: &mut RedisDb, stream: &mut TcpStream) {
+    pub fn execute(&mut self, cmd: RedisCommand, clientId: ClientId) {
         match cmd {
-            RedisCommand::Set(key, value, ttl) => {
-                Self::set_command(stream, redisDb, key, value, ttl)
-            }
-            RedisCommand::Get(key) => Self::get_command(stream, redisDb, key),
-            RedisCommand::RPush(key, value) => Self::r_push(stream, redisDb, key, value),
-            RedisCommand::Echo(value) => Self::echo(stream, value),
+            RedisCommand::Set(key, value, ttl) => self.set_command(clientId, key, value, ttl),
+            RedisCommand::Get(key) => self.get_command(clientId, key),
+            RedisCommand::RPush(key, value) => self.r_push(clientId, key, value),
+            RedisCommand::Echo(value) => self.echo(clientId, value),
             RedisCommand::Unkown => todo!(),
-            RedisCommand::Ping => Self::ping(stream),
-            RedisCommand::LRANGE(key, start, end) => Self::lrange(stream, redisDb, key, start, end),
-            RedisCommand::LPush(key, value) => Self::l_push(stream, redisDb, key, value),
-            RedisCommand::LLEN(key) => Self::list_length(stream, redisDb, key),
-            RedisCommand::LPOP(key, count) => Self::left_pop(stream, redisDb, key, count),
+            RedisCommand::Ping => self.ping(clientId),
+            RedisCommand::LRANGE(key, start, end) => self.lrange(clientId, key, start, end),
+            RedisCommand::LPush(key, value) => self.l_push(clientId, key, value),
+            RedisCommand::LLEN(key) => self.list_length(clientId, key),
+            RedisCommand::LPOP(key, count) => self.left_pop(clientId, key, count),
+            RedisCommand::BLPOP(key, timeout) => self.blocked_pop(clientId, key, timeout),
         }
     }
-    fn left_pop(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String, count: i32) {
-        if redisDb.map.contains_key(&key) {
-            if let Some(obj) = redisDb.map.get_mut(&key) {
+
+    fn blocked_pop(&mut self, clientId: ClientId, key: String, timeout: i32) {
+        let client = self.client_map.get_mut(&clientId).unwrap();
+        if self.redis_db.map.contains_key(&key) {
+            if let Some(obj) = self.redis_db.map.get_mut(&key) {
+                if let DataType::LIST(list) = &mut obj.data {
+                    match list.pop_front() {
+                        Some(node) => {
+                            let val = node.borrow_mut().val.clone();
+                            client
+                                .stream
+                                .borrow_mut()
+                                .write_all(&parse_resp(Resp::BulkString(val)))
+                                .unwrap();
+                        }
+                        None => {
+                            self.redis_db
+                                .blocked
+                                .entry(key.clone())
+                                .or_insert(VecDeque::new())
+                                .push_back(clientId);
+                            client.blocked = true;
+                            client.waiting_key = Some(key);
+                        }
+                    }
+                }
+            }
+        } else {
+            self.redis_db
+                .blocked
+                .entry(key.clone())
+                .or_insert(VecDeque::new())
+                .push_back(clientId);
+            client.blocked = true;
+            client.waiting_key = Some(key);
+        }
+    }
+
+    fn left_pop(&mut self, clientId: ClientId, key: String, count: i32) {
+        let mut client = self.client_map.get(&clientId).unwrap();
+        if self.redis_db.map.contains_key(&key) {
+            if let Some(obj) = self.redis_db.map.get_mut(&key) {
                 if let DataType::LIST(list) = &mut obj.data {
                     let mut popped_items = Vec::<String>::new();
                     let mut count = count;
@@ -46,46 +88,63 @@ impl RedisServer {
                                 popped_items.push(val);
                             }
                             None => {
-                                // stream.write(b"$-1\r\n").unwrap();
+                                // client.stream.write(b"$-1\r\n").unwrap();
                                 break;
                             }
                         }
                         count -= 1;
                     }
                     if popped_items.len() > 1 {
-                        stream
+                        client
+                            .stream
+                            .borrow_mut()
                             .write_all(&parse_resp(Resp::Array(popped_items)))
                             .unwrap()
                     } else {
-                        if popped_items.len()==1{
-                        stream.write_all(&parse_resp(Resp::BulkString(popped_items[0].clone()))).unwrap();
-                        }else{
-                            stream.write(b"$-1\r\n").unwrap();
+                        if popped_items.len() == 1 {
+                            client
+                                .stream
+                                .borrow_mut()
+                                .write_all(&parse_resp(Resp::BulkString(popped_items[0].clone())))
+                                .unwrap();
+                        } else {
+                            client.stream.borrow_mut().write_all(b"$-1\r\n").unwrap();
                         }
                     }
+                }
+            } else {
+                client.stream.borrow_mut().write_all(b"$-1\r\n").unwrap();
             }
-        } else {
-            stream.write(b"$-1\r\n").unwrap();
         }
     }
-}
-    fn list_length(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String) {
-        if redisDb.map.contains_key(&key) {
-            if let Some(obj) = redisDb.map.get_mut(&key) {
+
+    fn list_length(&mut self, clientId: ClientId, key: String) {
+        let client = self.client_map.get(&clientId).unwrap();
+        if self.redis_db.map.contains_key(&key) {
+            if let Some(obj) = self.redis_db.map.get_mut(&key) {
                 if let DataType::LIST(list) = &mut obj.data {
                     let count = list.count;
 
-                    stream.write_all(&parse_resp(Resp::Integer(count))).unwrap();
+                    client
+                        .stream
+                        .borrow_mut()
+                        .write_all(&parse_resp(Resp::Integer(count)))
+                        .unwrap();
                 }
             }
         } else {
-            stream.write_all(&parse_resp(Resp::Integer(0))).unwrap()
+            client
+                .stream
+                .borrow_mut()
+                .write_all(&parse_resp(Resp::Integer(0)))
+                .unwrap()
         }
     }
 
-    fn lrange(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String, start: i32, end: i32) {
-        if redisDb.map.contains_key(&key) {
-            if let Some(obj) = redisDb.map.get_mut(&key) {
+    fn lrange(&mut self, clientId: ClientId, key: String, start: i32, end: i32) {
+        let client = self.client_map.get(&clientId).unwrap();
+        if self.redis_db.map.contains_key(&key) {
+            if let Some(obj) = self.redis_db.map.get_mut(&key) {
                 if let DataType::LIST(list) = &mut obj.data {
                     let count = list.count;
                     let mut s = start;
@@ -99,96 +158,136 @@ impl RedisServer {
                     println!("{} -- > {}  --- {}", s, e, count);
                     let values = list.range(s as usize, e as usize);
                     println!("{:?}", values);
-                    stream.write_all(&parse_resp(Resp::Array(values))).unwrap();
+                    client
+                        .stream
+                        .borrow_mut()
+                        .write_all(&parse_resp(Resp::Array(values)))
+                        .unwrap();
                 }
             }
         } else {
-            stream.write_all(&parse_resp(Resp::Array(vec![]))).unwrap()
+            client
+                .stream
+                .borrow_mut()
+                .write_all(&parse_resp(Resp::Array(vec![])))
+                .unwrap()
         }
     }
-    fn set_command(
-        stream: &mut TcpStream,
-        redisDb: &mut RedisDb,
-        key: String,
-        value: String,
-        ttl: Option<u64>,
-    ) {
+
+    fn set_command(&mut self, clientId: ClientId, key: String, value: String, ttl: Option<u64>) {
+        let client = self.client_map.get(&clientId).unwrap();
         let obj = RedisObject {
             data: DataType::STRING(value),
         };
-        redisDb.map.insert(key.clone(), obj);
+        self.redis_db.map.insert(key.clone(), obj);
         match ttl {
             Some(val) => {
                 let expiry_time = SystemTime::now() + Duration::from_millis(val);
-                redisDb.expiry_map.insert(key.clone(), expiry_time);
+                self.redis_db.expiry_map.insert(key.clone(), expiry_time);
             }
             None => {}
         }
-        stream
+        client
+            .stream
+            .borrow_mut()
             .write_all(&parse_resp(Resp::SimpleString(String::from("OK"))))
             .unwrap()
     }
 
-    fn get_command(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String) {
-        if redisDb.map.contains_key(&key) {
-            if let Some(exp_time) = redisDb.expiry_map.get(&key) {
+    fn get_command(&mut self, clientId: ClientId, key: String) {
+        let client = self.client_map.get(&clientId).unwrap();
+        if self.redis_db.map.contains_key(&key) {
+            if let Some(exp_time) = self.redis_db.expiry_map.get(&key) {
                 if *exp_time < SystemTime::now() {
-                    redisDb.expiry_map.remove(&key);
-                    redisDb.map.remove(&key);
-                    stream.write(b"$-1\r\n").unwrap();
+                    self.redis_db.expiry_map.remove(&key);
+                    self.redis_db.map.remove(&key);
+                    client.stream.borrow_mut().write_all(b"$-1\r\n").unwrap();
                 }
             }
 
-            if let Some(obj) = redisDb.map.get(&key) {
+            if let Some(obj) = self.redis_db.map.get(&key) {
                 if let DataType::STRING(val) = &obj.data {
                     println!("pear {val}");
-                    stream
+                    client
+                        .stream
+                        .borrow_mut()
                         .write_all(&parse_resp(Resp::BulkString(val.clone())))
                         .unwrap();
                 }
             }
         }
     }
-    fn echo(stream: &mut TcpStream, value: String) {
-        stream
+
+    fn echo(&mut self, clientId: ClientId, value: String) {
+        let client = self.client_map.get(&clientId).unwrap();
+        client
+            .stream
+            .borrow_mut()
             .write_all(&parse_resp(Resp::BulkString(value)))
             .unwrap();
     }
-    fn ping(stream: &mut TcpStream) {
-        stream.write_all(&parse_resp(Resp::SimpleString(String::from("PONG"))));
-    }
-    pub fn execute_stream(redisDb: &mut RedisDb, stream: &mut TcpStream) {
-        let mut buffer = [0; 1024];
-        match stream.read(&mut buffer) {
-            Ok(bytes_read) => {
-                if bytes_read != 0 {
-                    let message = from_utf8(&buffer[..bytes_read]).unwrap();
-                    // println!("{:?}",message);
-                    if let Resp::Array(arr) = parse_message(message) {
-                        let array_iter = arr.into_iter();
-                        println!("{:?}", message);
-                        let command_array: Vec<String> =
-                            array_iter.filter(|val: &String| val.len() != 0).collect();
-                        println!("{:?}", command_array);
-                        let redisCommnad = array_to_command(&command_array);
 
-                        Self::execute(redisCommnad, redisDb, stream);
-                    }
-                }
+    fn ping(&mut self, clientId: ClientId) {
+        let client = self.client_map.get(&clientId).unwrap();
+        client
+            .stream
+            .borrow_mut()
+            .write_all(&parse_resp(Resp::SimpleString(String::from("PONG"))));
+    }
+
+    pub fn execute_stream(&mut self, clientId: ClientId) {
+        let mut buffer = [0; 1024];
+        let client = self.client_map.get(&clientId).unwrap();
+        let bytes_read = match client.stream.borrow_mut().read(&mut buffer) {
+            Ok(bytes_read) => bytes_read,
+            Err(_) => 0,
+        };
+        if bytes_read != 0 {
+            let message = from_utf8(&buffer[..bytes_read]).unwrap();
+            // println!("{:?}",message);
+            if let Resp::Array(arr) = parse_message(message) {
+                let array_iter = arr.into_iter();
+                println!("{:?}", message);
+                let command_array: Vec<String> =
+                    array_iter.filter(|val: &String| val.len() != 0).collect();
+                println!("{:?}", command_array);
+                let redisCommnad = array_to_command(&command_array);
+                self.execute(redisCommnad, clientId);
             }
-            Err(_) => {}
         }
     }
-    pub fn l_push(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String, values: Vec<String>) {
-        println!("lpush");
-        if redisDb.map.contains_key(&key) {
-            if let Some(obj) = redisDb.map.get_mut(&key) {
+    fn check_blocked(&mut self,key: &String,values:Vec<String>)->bool{
+       if self.redis_db.blocked.contains_key(key){
+        return match self.redis_db.blocked.get_mut(key).unwrap().pop_front(){
+            Some(clientId) =>{
+                let client =self.client_map.get_mut(&clientId).unwrap();
+                client.blocked = false;
+                client.waiting_key = None;
+                client.stream.borrow_mut().write_all(&parse_resp(Resp::BulkString(values[0].clone()))).unwrap();
+                true
+            },
+            None => false,
+        }
+        
+       }{
+        return false;
+       }
+    }
+    pub fn l_push(&mut self, clientId: ClientId, key: String, values: Vec<String>) {
+       if self.check_blocked(&key, values){
+        return ;
+       }
+        let client = self.client_map.get(&clientId).unwrap();
+        if self.redis_db.map.contains_key(&key) {
+            if let Some(obj) = self.redis_db.map.get_mut(&key) {
                 if let DataType::LIST(list) = &mut obj.data {
                     println!("order given{:?}", values);
                     for value in values {
                         list.push_front(value);
                     }
-                    stream
+                    client
+                        .stream
+                        .borrow_mut()
                         .write_all(&parse_resp(Resp::Integer(list.count)))
                         .unwrap()
                 }
@@ -204,20 +303,30 @@ impl RedisServer {
             let obj = RedisObject {
                 data: DataType::LIST(list),
             };
-            redisDb.map.insert(key, obj);
-            stream.write_all(&parse_resp(Resp::Integer(count))).unwrap()
+            self.redis_db.map.insert(key, obj);
+            client
+                .stream
+                .borrow_mut()
+                .write_all(&parse_resp(Resp::Integer(count)))
+                .unwrap()
         }
     }
 
-    pub fn r_push(stream: &mut TcpStream, redisDb: &mut RedisDb, key: String, values: Vec<String>) {
+    pub fn r_push(&mut self, clientId: ClientId, key: String, values: Vec<String>) {
+        if self.check_blocked(&key, values){
+        return ;
+       }
         println!("rpush");
-        if redisDb.map.contains_key(&key) {
-            if let Some(obj) = redisDb.map.get_mut(&key) {
+        let client = self.client_map.get(&clientId).unwrap();
+        if self.redis_db.map.contains_key(&key) {
+            if let Some(obj) = self.redis_db.map.get_mut(&key) {
                 if let DataType::LIST(list) = &mut obj.data {
                     for value in values {
                         list.push_back(value);
                     }
-                    stream
+                    client
+                        .stream
+                        .borrow_mut()
                         .write_all(&parse_resp(Resp::Integer(list.count)))
                         .unwrap()
                 }
@@ -232,8 +341,12 @@ impl RedisServer {
             let obj = RedisObject {
                 data: DataType::LIST(list),
             };
-            redisDb.map.insert(key, obj);
-            stream.write_all(&parse_resp(Resp::Integer(count))).unwrap()
+            self.redis_db.map.insert(key, obj);
+            client
+                .stream
+                .borrow_mut()
+                .write_all(&parse_resp(Resp::Integer(count)))
+                .unwrap()
         }
     }
 }

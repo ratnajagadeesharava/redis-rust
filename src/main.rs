@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![allow(unused_mut)]
+mod client;
 mod list;
 mod redisCommand;
 mod redisDb;
@@ -12,6 +13,7 @@ use regex::Regex;
 use regex_split::RegexSplit;
 use resp::Resp;
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet, VecDeque},
     f32::consts::E,
     io::{ErrorKind, Read, Write},
@@ -21,31 +23,47 @@ use std::{
     time::{Duration, SystemTime, SystemTimeError},
 };
 
-use crate::{redisDb::RedisDb, redisServer::RedisServer, resp::parse_message};
+use crate::{
+    client::{Client, ClientId},
+    redisDb::RedisDb,
+    redisServer::RedisServer,
+    resp::parse_message,
+};
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
-    let mut redisDb = RedisDb::new(); //lets think there is no user specific data
-    let mut clients = Vec::<(TcpStream)>::new();
+
+    let mut server: RedisServer = RedisServer {
+        client_map: HashMap::new(),
+        redis_db: RedisDb::new(), //lets think there is no user specific data
+    };
+    let mut clients = Vec::<ClientId>::new();
 
     listener
         .set_nonblocking(true)
         .expect("non blocking is not possible");
+
+    let mut client_id: ClientId = 0;
+
     loop {
         match listener.accept() {
             Ok((stream, _)) => {
                 stream.set_nonblocking(true).unwrap();
-                clients.push(stream);
-                // println!("{:?}",clients);
+                let mut client = Client {
+                    stream: RefCell::new(stream),
+                    clientId: client_id,
+                    blocked: false,
+                    waiting_key: None,
+                };
+                server.client_map.insert(client_id, client);
+                clients.push(client_id);
+                client_id += client_id;
             }
             Err(_) => {}
         }
 
-        for mut _stream in &mut clients {
-            
-            RedisServer::execute_stream(&mut redisDb, &mut _stream);
+        for client in &mut clients {
+            server.execute_stream(*client);
         }
     }
 }
-
-

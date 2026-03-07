@@ -1,3 +1,4 @@
+use core::time;
 use std::{
     collections::{HashMap, btree_map::Values},
     io::Write,
@@ -23,6 +24,7 @@ pub enum RedisCommand {
     LPush(String, Vec<String>),
     LLEN(String),
     LPOP(String, i32),
+    BLPOP (String,i32)
 }
 
 type CommandFn = fn();
@@ -47,7 +49,9 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                     redisCommand = RedisCommand::Set(key, value, None);
                 }
             }
-            "LLEN" => redisCommand = RedisCommand::LLEN(command_array[index + 2].clone()),
+            "LLEN" => {
+                redisCommand = RedisCommand::LLEN(command_array[index + 2].clone());
+            }
             "LPOP" => {
                 // let count =
                 let key = command_array[index + 2].clone();
@@ -58,12 +62,16 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                 }
                 redisCommand = RedisCommand::LPOP(key, count);
             }
-            "GET" => redisCommand = RedisCommand::Get(command_array[index + 2].clone()),
-            "PING" => redisCommand = RedisCommand::Ping,
+            "GET" => {
+                redisCommand = RedisCommand::Get(command_array[index + 2].clone());
+            }
+            "PING" => {
+                redisCommand = RedisCommand::Ping;
+            }
             "ECHO" => {
                 index += 2;
                 println!("{:?}", command_array[index]);
-                redisCommand = RedisCommand::Echo(command_array[index].clone())
+                redisCommand = RedisCommand::Echo(command_array[index].clone());
             }
             "RPUSH" => {
                 index += 2;
@@ -96,7 +104,14 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
                 let start: i32 = command_array[index].clone().parse().unwrap();
                 index += 2;
                 let end: i32 = command_array[index].clone().parse().unwrap();
-                redisCommand = RedisCommand::LRANGE(key, start, end)
+                redisCommand = RedisCommand::LRANGE(key, start, end);
+            }
+            "BLPOP " => {
+                index+=2;
+                let key = command_array[index].clone();
+                index+=2;
+                let timeout = command_array[index].clone().parse::<i32>().unwrap();
+                redisCommand = RedisCommand::BLPOP(key, timeout)
             }
             _ => {
                 index += 1;
