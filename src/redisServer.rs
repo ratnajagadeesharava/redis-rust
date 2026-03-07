@@ -258,7 +258,7 @@ impl RedisServer {
             }
         }
     }
-    fn check_blocked(&mut self,key: &String,values:&Vec<String>)->bool{
+    fn check_blocked(&mut self,key: &String,values:&Vec<String>,current_client_id:ClientId)->bool{
        if self.redis_db.blocked.contains_key(key){
         return match self.redis_db.blocked.get_mut(key).unwrap().pop_front(){
             Some(clientId) =>{
@@ -267,6 +267,8 @@ impl RedisServer {
                 client.waiting_key = None;
                 client.stream.borrow_mut().write_all(&parse_resp(Resp::BulkString(values[0].clone()))).unwrap();
                 println!("unblocked ting tong");
+                let current_client = self.client_map.get_mut(&current_client_id).unwrap();
+                 current_client.stream.borrow_mut().write_all(&parse_resp(Resp::Integer(1))).unwrap();
                 true
             },
             None => false,
@@ -277,7 +279,7 @@ impl RedisServer {
        }
     }
     pub fn l_push(&mut self, clientId: ClientId, key: String, values: Vec<String>) {
-       if self.check_blocked(&key, &values){
+       if self.check_blocked(&key, &values,clientId){
         return ;
        }
         let client = self.client_map.get(&clientId).unwrap();
@@ -316,7 +318,7 @@ impl RedisServer {
     }
 
     pub fn r_push(&mut self, clientId: ClientId, key: String, values: Vec<String>) {
-        if self.check_blocked(&key, &values){
+        if self.check_blocked(&key, &values,clientId){
         return ;
        }
         println!("rpush");
