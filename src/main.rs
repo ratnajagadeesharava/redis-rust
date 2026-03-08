@@ -52,11 +52,11 @@ fn main() {
                     clientId: client_id,
                     blocked: false,
                     waiting_key: None,
-                    waiting_time:None
+                    waiting_time: None,
                 };
                 server.client_map.insert(client_id, client);
                 clients.push(client_id);
-                
+
                 client_id += 1;
             }
             Err(_) => {}
@@ -64,16 +64,15 @@ fn main() {
 
         for clientId in &mut clients {
             server.execute_stream(*clientId);
-            if let Some(client)= server.client_map.get_mut(clientId){
-                if client.blocked{
-                    if let Some(waiting_time) = client.waiting_time{
-                        if waiting_time < SystemTime::now(){
+            if let Some(client) = server.client_map.get_mut(clientId) {
+                if client.blocked {
+                    if let Some(waiting_time) = client.waiting_time {
+                        if waiting_time < SystemTime::now() {
                             client.waiting_key = None;
                             client.waiting_time = None;
                             client.blocked = false;
                             client.stream.borrow_mut().write_all(b"*-1\r\n").unwrap();
                         }
-
                     }
                 }
             }

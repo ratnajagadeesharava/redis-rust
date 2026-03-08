@@ -29,5 +29,5 @@ set -e # Exit early if any commands fail
 # printf '*2\r\n$4\r\nECHO\r\n$4\r\npear\r\n' | nc 127.0.0.1 6379
 # printf '*4\r\n$5\r\nRPUSH\r\n$9\r\nraspberry\r\n$6\r\nbanana\r\n$4\r\npear\r\n' | nc 127.0.0.1 6379
 # printf '*3\r\n$5\r\nBLPOP\r\n$6\r\norange\r\n$1\r\n0\r\n' | nc 
-printf '*4\r\n$6\r\nLRANGE\r\n$6\r\nbanana\r\n$1\r\n0\r\n$2\r\n-1\r\n' | nc 127.0.0.1 6379
+# printf '*4\r\n$6\r\nLRANGE\r\n$6\r\nbanana\r\n$1\r\n0\r\n$2\r\n-1\r\n' | nc 127.0.0.1 6379
 printf '*5\r\n$4\r\nXADD\r\n$9\r\nblueberry\r\n$3\r\n0-1\r\n$3\r\nfoo\r\n$3\r\nbar\r\n' | nc 127.0.0.1 6379

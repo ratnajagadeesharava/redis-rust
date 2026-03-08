@@ -3,7 +3,7 @@ use std::{
     collections::{HashMap, btree_map::Values},
     io::Write,
     net::TcpStream,
-    time::{Duration, SystemTime},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use crate::{
@@ -37,7 +37,7 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
         .step_by(2)
         .map(String::as_str)
         .collect();
-    println!("args {:?}",args);
+    println!("args {:?}", args);
     match args.as_slice() {
         ["PING"] => RedisCommand::Ping,
 
@@ -74,14 +74,19 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
             rest.iter().map(|element| element.to_string()).collect(),
         ),
 
-        ["LRANGE",key,start,end]=>{
-            let start:i32 = start.parse().unwrap();
-            let end:i32 = end.parse().unwrap();
+        ["LRANGE", key, start, end] => {
+            let start: i32 = start.parse().unwrap();
+            let end: i32 = end.parse().unwrap();
             RedisCommand::LRANGE(key.to_string(), start, end)
         }
 
         ["XADD", key, id, rest @ ..] => {
             let mut key_value = Vec::<(String, String)>::new();
+            let now = SystemTime::now();
+            let duration_since_epoch = now.duration_since(UNIX_EPOCH).unwrap();
+            let duration_in_milli_seconds = duration_since_epoch.as_millis().to_string();
+
+            println!("{:?}", duration_in_milli_seconds);
 
             for pair in rest.iter().collect::<Vec<_>>().chunks(2) {
                 key_value.push((pair[0].to_string(), pair[1].to_string()));

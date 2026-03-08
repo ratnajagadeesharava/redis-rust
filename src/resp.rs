@@ -16,26 +16,28 @@ pub fn parse_resp(value: Resp) -> Vec<u8> {
             let result = format!("+{val}\r\n");
             result.into_bytes()
         }
-        Resp::Error(_) => todo!(),
-        Resp::Integer(val) =>{
+        Resp::Error(val) => {
+            let result = format!("-ERR {val}\r\n");
+            result.into_bytes()
+        }
+        Resp::Integer(val) => {
             let result = format!(":{val}\r\n");
             result.into_bytes()
-        },
+        }
         Resp::BulkString(val) => {
             let result = format!("${}\r\n{val}\r\n", val.len());
             result.into_bytes()
         }
         Resp::Array(items) => {
             let l = items.len();
-            let mut result:String = format!("*{l}\r\n");
-            println!("{:?}",items);
-            for item in items{
+            let mut result: String = format!("*{l}\r\n");
+            println!("{:?}", items);
+            for item in items {
                 let bytes = parse_resp(Resp::BulkString(item));
                 result += &String::from_utf8(bytes).unwrap();
             }
             result.into_bytes()
-
-        },
+        }
         Resp::Other(_) => todo!(),
     }
 }

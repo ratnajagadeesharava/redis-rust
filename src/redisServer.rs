@@ -3,7 +3,7 @@ use std::{
     io::{Read, Write},
     net::TcpStream,
     str::from_utf8,
-    time::{Duration, SystemTime},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use crate::{
@@ -27,7 +27,7 @@ impl RedisServer {
             RedisCommand::Get(key) => self.get_command(clientId, key),
             RedisCommand::RPush(key, value) => self.r_push(clientId, key, value),
             RedisCommand::Echo(value) => self.echo(clientId, value),
-            
+
             RedisCommand::Ping => self.ping(clientId),
             RedisCommand::LRANGE(key, start, end) => self.lrange(clientId, key, start, end),
             RedisCommand::LPush(key, value) => self.l_push(clientId, key, value),
@@ -47,7 +47,28 @@ impl RedisServer {
         id: &String,
         key_values: Vec<(String, String)>,
     ) {
+        // let now = SystemTime::now();
+        // let duration_since_epoch = now.duration_since(UNIX_EPOCH).unwrap();
+        // let duration_in_milli_seconds = duration_since_epoch.as_millis().to_string();
         let client = self.client_map.get(&clientId).unwrap();
+        let id_split_vec: Vec<&str> = id.split("-").collect();
+        let id_u64: u128 = id_split_vec[0].parse().unwrap();
+        let sequence_number: u32 = id_split_vec[1].parse().unwrap();
+        if id_u64 == self.redis_db.last_id {
+            if sequence_number <= self.redis_db.last_sequence_number {
+                self.write_to_client(clientId, Resp::Error("ERR The ID specified in XADD is equal or smaller than the target stream top item".to_string()));
+                return;
+            } else {
+                self.redis_db.last_sequence_number = sequence_number;
+            }
+        } else if id_u64 < self.redis_db.last_id {
+            self.write_to_client(clientId, Resp::Error("ERR The ID specified in XADD is equal or smaller than the target stream top item".to_string()));
+            return;
+        } else {
+            self.redis_db.last_id = id_u64;
+            self.redis_db.last_sequence_number = sequence_number;
+        }
+        //
         if self.redis_db.map.contains_key(key) {
             if let Some(obj) = self.redis_db.map.get_mut(key) {
                 if let DataType::STREAM(map) = &mut obj.data {
