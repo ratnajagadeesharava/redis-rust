@@ -54,9 +54,11 @@ impl RedisServer {
         let id_split_vec: Vec<&str> = id.split("-").collect();
         let id_u64: u128 = id_split_vec[0].parse().unwrap();
         let sequence_number: u32 = id_split_vec[1].parse().unwrap();
+        let exisiting_id = self.redis_db.last_id;
+        let exisiting_sq_no = self.redis_db.last_sequence_number;
         if id_u64 == self.redis_db.last_id {
             if sequence_number <= self.redis_db.last_sequence_number {
-                self.write_to_client(clientId, Resp::Error("The ID specified in XADD is equal or smaller than the target stream top item".to_string()));
+                self.write_to_client(clientId, Resp::Error(format!("The ID specified in XADD is equal or smaller than {exisiting_id}-{exisiting_sq_no}")));
                 return;
             } else {
                 self.redis_db.last_sequence_number = sequence_number;
@@ -65,8 +67,7 @@ impl RedisServer {
             self.write_to_client(
                 clientId,
                 Resp::Error(
-                    "The ID specified in XADD is equal or smaller than the target stream top item"
-                        .to_string(),
+                    format!("The ID specified in XADD is equal or smaller than {exisiting_id}-{exisiting_sq_no}")
                 ),
             );
             return;
