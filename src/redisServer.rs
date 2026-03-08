@@ -35,7 +35,7 @@ impl RedisServer {
             RedisCommand::LPOP(key, count) => self.left_pop(clientId, key, count),
             RedisCommand::BLPOP(key, timeout) => self.blocked_pop(clientId, key, timeout),
             RedisCommand::TYPE(key) => self.find_type(clientId, key),
-            RedisCommand::XADD(key, id, key_values) => self.xadd(clientId, &key, &id, key_values),
+            RedisCommand::XADD(key, id, key_values) => self.xadd(clientId, &key, id, key_values),
             RedisCommand::Unkown => todo!(),
         }
     }
@@ -44,29 +44,40 @@ impl RedisServer {
         &mut self,
         clientId: ClientId,
         key: &String,
-        id: &String,
+        id: String,
         key_values: Vec<(String, String)>,
     ) {
-        // let now = SystemTime::now();
-        // let duration_since_epoch = now.duration_since(UNIX_EPOCH).unwrap();
-        // let duration_in_milli_seconds = duration_since_epoch.as_millis().to_string();
+        let mut id = id;
         let client = self.client_map.get(&clientId).unwrap();
-        let id_split_vec: Vec<&str> = id.split("-").collect();
+        let mut id_split_vec: Vec<&str> = id.split("-").collect();
+        let mut generate_sequence = false;
+        if id_split_vec[1] == "*" {
+            id_split_vec[1] = "0";
+            generate_sequence = true;
+        }
         let id_u64: u128 = id_split_vec[0].parse().unwrap();
         let sequence_number: u32 = id_split_vec[1].parse().unwrap();
         let exisiting_id = self.redis_db.last_id;
         let exisiting_sq_no = self.redis_db.last_sequence_number;
         if id_u64 == 0 && sequence_number == 0 {
-            self.write_to_client(
-                clientId,
-                Resp::Error(format!("The ID specified in XADD must be greater than 0-0")),
-            );
-            return;
+            if generate_sequence {
+                id = "0-1".to_string();
+            } else {
+                self.write_to_client(
+                    clientId,
+                    Resp::Error(format!("The ID specified in XADD must be greater than 0-0")),
+                );
+                return;
+            }
         }
         if id_u64 == self.redis_db.last_id {
             if sequence_number <= self.redis_db.last_sequence_number {
-                self.write_to_client(clientId, Resp::Error(format!("The ID specified in XADD is equal or smaller than the target stream top item")));
-                return;
+                if generate_sequence {
+                    id = format!("{id_u64}-{}", self.redis_db.last_sequence_number + 1);
+                } else {
+                    self.write_to_client(clientId, Resp::Error(format!("The ID specified in XADD is equal or smaller than the target stream top item")));
+                    return;
+                }
             } else {
                 self.redis_db.last_sequence_number = sequence_number;
             }
@@ -78,15 +89,16 @@ impl RedisServer {
                 )),
             );
             return;
-        } else {
-            self.redis_db.last_id = id_u64;
-            self.redis_db.last_sequence_number = sequence_number;
         }
+
+        self.redis_db.last_id = id_u64;
+        self.redis_db.last_sequence_number = sequence_number;
+
         //
         if self.redis_db.map.contains_key(key) {
             if let Some(obj) = self.redis_db.map.get_mut(key) {
                 if let DataType::STREAM(map) = &mut obj.data {
-                    if let Some(key_value_map) = map.get_mut(id) {
+                    if let Some(key_value_map) = map.get_mut(&id) {
                         for val in key_values {
                             key_value_map.insert(val.0, val.1);
                         }
@@ -98,8 +110,8 @@ impl RedisServer {
                 data: DataType::STREAM(HashMap::new()),
             };
             if let DataType::STREAM(map) = &mut obj.data {
-                map.insert(id.clone(), HashMap::new());
-                if let Some(key_value_map) = map.get_mut(id) {
+                map.insert(id.to_string(), HashMap::new());
+                if let Some(key_value_map) = map.get_mut(&id) {
                     for val in key_values {
                         key_value_map.insert(val.0, val.1);
                     }
@@ -107,7 +119,7 @@ impl RedisServer {
             }
             self.redis_db.map.insert(key.clone(), obj);
         }
-        self.write_to_client(clientId, Resp::BulkString(id.clone()));
+        self.write_to_client(clientId, Resp::BulkString(id.to_string()));
     }
     #[inline]
     fn write_to_client(&mut self, clientId: ClientId, val: Resp) {
@@ -328,6 +340,8 @@ impl RedisServer {
                         .unwrap();
                 }
             }
+        } else {
+            client.stream.borrow_mut().write_all(b"$-1\r\n").unwrap()
         }
     }
 
