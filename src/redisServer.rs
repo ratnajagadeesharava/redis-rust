@@ -58,7 +58,7 @@ impl RedisServer {
         let exisiting_sq_no = self.redis_db.last_sequence_number;
         if id_u64 == self.redis_db.last_id {
             if sequence_number <= self.redis_db.last_sequence_number {
-                self.write_to_client(clientId, Resp::Error(format!("The ID specified in XADD is equal or smaller than {exisiting_id}-{exisiting_sq_no}")));
+                self.write_to_client(clientId, Resp::Error(format!("The ID specified in XADD is equal or smaller than the target stream top item")));
                 return;
             } else {
                 self.redis_db.last_sequence_number = sequence_number;
