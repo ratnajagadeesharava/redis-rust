@@ -51,10 +51,13 @@ impl RedisServer {
         let client = self.client_map.get(&clientId).unwrap();
         let mut id_split_vec: Vec<&str> = id.split("-").collect();
         let mut generate_sequence = false;
+        let mut new_id = id.clone();
         if id_split_vec[1] == "*" {
             id_split_vec[1] = "0";
+            new_id = format!("{}-0", id_split_vec[0]);
             generate_sequence = true;
         }
+        let mut id = new_id;
         let id_u64: u128 = id_split_vec[0].parse().unwrap();
         let sequence_number: u32 = id_split_vec[1].parse().unwrap();
         let exisiting_id = self.redis_db.last_id;
