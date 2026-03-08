@@ -35,6 +35,41 @@ impl RedisServer {
             RedisCommand::LPOP(key, count) => self.left_pop(clientId, key, count),
             RedisCommand::BLPOP(key, timeout) => self.blocked_pop(clientId, key, timeout),
             RedisCommand::TYPE(key) => self.find_type(clientId, key),
+            RedisCommand::XADD(key, id, key_values) => self.xadd(clientId, &key, &id, key_values),
+        }
+    }
+
+    fn xadd(
+        &mut self,
+        clientId: ClientId,
+        key: &String,
+        id: &String,
+        key_values: Vec<(String, String)>,
+    ) {
+        let client = self.client_map.get(&clientId).unwrap();
+        if self.redis_db.map.contains_key(key) {
+            if let Some(obj) = self.redis_db.map.get_mut(key) {
+                if let DataType::STREAM(map) = &mut obj.data {
+                    if let Some(key_value_map) = map.get_mut(id) {
+                        for val in key_values {
+                            key_value_map.insert(val.0, val.1);
+                        }
+                    }
+                }
+            }
+        } else {
+            let mut obj = RedisObject {
+                data: DataType::STREAM(HashMap::new()),
+            };
+            if let DataType::STREAM(map) = &mut obj.data {
+                map.insert(id.clone(), HashMap::new());
+                if let Some(key_value_map) = map.get_mut(id) {
+                    for val in key_values {
+                        key_value_map.insert(val.0, val.1);
+                    }
+                }
+            }
+            self.redis_db.map.insert(key.clone(), obj);
         }
     }
     #[inline]
@@ -56,7 +91,7 @@ impl RedisServer {
                 DataType::LIST(list) => {
                     self.write_to_client(clientId, Resp::SimpleString("list".to_string()));
                 }
-                DataType::STREAM(map)=>{
+                DataType::STREAM(map) => {
                     self.write_to_client(clientId, Resp::SimpleString("stream".to_string()));
                 }
             },

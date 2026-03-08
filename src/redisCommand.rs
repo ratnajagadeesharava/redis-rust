@@ -26,6 +26,7 @@ pub enum RedisCommand {
     LPOP(String, i32),
     BLPOP(String, i32),
     TYPE(String),
+    XADD(String, String, Vec<(String, String)>),
 }
 
 type CommandFn = fn();
@@ -58,14 +59,25 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
             let t = timeout.parse::<f64>().unwrap() * 1000.0;
             RedisCommand::BLPOP(key.to_string(), t as i32)
         }
+
         ["RPUSH", key, rest @ ..] => RedisCommand::RPush(
             key.to_string(),
             rest.iter().map(|v| v.to_string()).collect(),
         ),
+
         ["LPUSH", key, rest @ ..] => RedisCommand::LPush(
             key.to_string(),
             rest.iter().map(|element| element.to_string()).collect(),
         ),
+        ["XADD", key, id, rest @ ..] => {
+            let mut key_value = Vec::<(String, String)>::new();
+
+            for pair in rest.iter().skip(1).step_by(2).collect::<Vec<_>>().chunks(2) {
+                key_value.push((pair[0].to_string(), pair[1].to_string()));
+            }
+
+            RedisCommand::XADD(key.to_string(), id.to_string(), key_value)
+        }
         ["TYPE", key] => RedisCommand::TYPE(key.to_string()),
         _ => RedisCommand::Unkown,
     }
