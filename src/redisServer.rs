@@ -59,9 +59,7 @@ impl RedisServer {
         if id_u64 == 0 && sequence_number == 0 {
             self.write_to_client(
                 clientId,
-                Resp::Error(format!(
-                    "ERR The ID specified in XADD must be greater than 0-0"
-                )),
+                Resp::Error(format!("The ID specified in XADD must be greater than 0-0")),
             );
             return;
         }
