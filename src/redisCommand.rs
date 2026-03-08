@@ -74,6 +74,12 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
             rest.iter().map(|element| element.to_string()).collect(),
         ),
 
+        ["LRANGE",key,start,end]=>{
+            let start:i32 = start.parse().unwrap();
+            let end:i32 = end.parse().unwrap();
+            RedisCommand::LRANGE(key.to_string(), start, end)
+        }
+
         ["XADD", key, id, rest @ ..] => {
             let mut key_value = Vec::<(String, String)>::new();
 
