@@ -27,7 +27,7 @@ impl RedisServer {
             RedisCommand::Get(key) => self.get_command(clientId, key),
             RedisCommand::RPush(key, value) => self.r_push(clientId, key, value),
             RedisCommand::Echo(value) => self.echo(clientId, value),
-            RedisCommand::Unkown => todo!(),
+            
             RedisCommand::Ping => self.ping(clientId),
             RedisCommand::LRANGE(key, start, end) => self.lrange(clientId, key, start, end),
             RedisCommand::LPush(key, value) => self.l_push(clientId, key, value),
@@ -36,6 +36,7 @@ impl RedisServer {
             RedisCommand::BLPOP(key, timeout) => self.blocked_pop(clientId, key, timeout),
             RedisCommand::TYPE(key) => self.find_type(clientId, key),
             RedisCommand::XADD(key, id, key_values) => self.xadd(clientId, &key, &id, key_values),
+            RedisCommand::Unkown => todo!(),
         }
     }
 
@@ -71,6 +72,7 @@ impl RedisServer {
             }
             self.redis_db.map.insert(key.clone(), obj);
         }
+        self.write_to_client(clientId, Resp::BulkString(id.clone()));
     }
     #[inline]
     fn write_to_client(&mut self, clientId: ClientId, val: Resp) {

@@ -33,14 +33,18 @@ type CommandFn = fn();
 pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
     let args: Vec<&str> = command_array
         .iter()
-        .skip(1)
+        .skip(2)
         .step_by(2)
         .map(String::as_str)
         .collect();
+    println!("args {:?}",args);
     match args.as_slice() {
         ["PING"] => RedisCommand::Ping,
+
         ["GET", key] => RedisCommand::Get(key.to_string()),
+
         ["SET", key, value] => RedisCommand::Set(key.to_string(), value.to_string(), None),
+
         ["SET", key, value, "PX", ttl] => RedisCommand::Set(
             key.to_string(),
             value.to_string(),
@@ -69,16 +73,19 @@ pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
             key.to_string(),
             rest.iter().map(|element| element.to_string()).collect(),
         ),
+
         ["XADD", key, id, rest @ ..] => {
             let mut key_value = Vec::<(String, String)>::new();
 
-            for pair in rest.iter().skip(1).step_by(2).collect::<Vec<_>>().chunks(2) {
+            for pair in rest.iter().collect::<Vec<_>>().chunks(2) {
                 key_value.push((pair[0].to_string(), pair[1].to_string()));
             }
 
             RedisCommand::XADD(key.to_string(), id.to_string(), key_value)
         }
+
         ["TYPE", key] => RedisCommand::TYPE(key.to_string()),
+
         _ => RedisCommand::Unkown,
     }
 }
