@@ -37,7 +37,7 @@ impl RedisServer {
             RedisCommand::TYPE(key) => self.find_type(clientId, key),
         }
     }
-
+    #[inline]
     fn write_to_client(&mut self, clientId: ClientId, val: Resp) {
         let client = self.client_map.get_mut(&clientId).unwrap();
         client
@@ -46,7 +46,7 @@ impl RedisServer {
             .write_all(&parse_resp(val))
             .unwrap();
     }
-     
+
     fn find_type(&mut self, clientId: ClientId, key: String) {
         match self.redis_db.map.get_mut(&key) {
             Some(obj) => match &obj.data {
@@ -56,12 +56,16 @@ impl RedisServer {
                 DataType::LIST(list) => {
                     self.write_to_client(clientId, Resp::SimpleString("list".to_string()));
                 }
+                DataType::STREAM(map)=>{
+                    self.write_to_client(clientId, Resp::SimpleString("stream".to_string()));
+                }
             },
             None => {
                 self.write_to_client(clientId, Resp::SimpleString("none".to_string()));
             }
         }
     }
+
     fn blocked_pop(&mut self, clientId: ClientId, key: String, timeout: i32) {
         let client = self.client_map.get_mut(&clientId).unwrap();
         if self.redis_db.map.contains_key(&key) {

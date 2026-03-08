@@ -9,9 +9,6 @@ mod redisDb;
 mod redisObject;
 mod redisServer;
 mod resp;
-use bytes::buf;
-use regex::Regex;
-use regex_split::RegexSplit;
 use resp::Resp;
 use std::{
     cell::RefCell,

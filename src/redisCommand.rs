@@ -24,110 +24,49 @@ pub enum RedisCommand {
     LPush(String, Vec<String>),
     LLEN(String),
     LPOP(String, i32),
-    BLPOP (String,i32),
-    TYPE(String)
+    BLPOP(String, i32),
+    TYPE(String),
 }
 
 type CommandFn = fn();
-//["5", "SET", "mykey", "hello", "PX", "5000"]
 pub fn array_to_command(command_array: &Vec<String>) -> RedisCommand {
-    let mut index = 0;
-    let n = command_array.len();
-    let mut redisCommand = RedisCommand::Unkown;
-    loop {
-        let cmd = &command_array[index];
-        println!("{}",index);
-        match cmd.as_str() {
-            "SET" => {
-                index += 2;
-                let key = command_array[index].clone();
-                index += 2;
-                let value = command_array[index].clone();
-                index += 4;
-                if index <= n - 1 {
-                    let ttl: u64 = command_array[index].as_str().parse().unwrap();
-                    redisCommand = RedisCommand::Set(key, value, Some(ttl));
-                } else {
-                    redisCommand = RedisCommand::Set(key, value, None);
-                }
-            }
-            "LLEN" => {
-                redisCommand = RedisCommand::LLEN(command_array[index + 2].clone());
-            }
-            "LPOP" => {
-                // let count =
-                let key = command_array[index + 2].clone();
-                let mut count = 1;
-                index += 2;
-                if index + 2 < n {
-                    count = command_array[index + 2].clone().parse::<i32>().unwrap();
-                }
-                redisCommand = RedisCommand::LPOP(key, count);
-            }
-            "GET" => {
-                redisCommand = RedisCommand::Get(command_array[index + 2].clone());
-            }
-            "PING" => {
-                redisCommand = RedisCommand::Ping;
-            }
-            "ECHO" => {
-                index += 2;
-                redisCommand = RedisCommand::Echo(command_array[index].clone());
-            }
-            "RPUSH" => {
-                index += 2;
-                let key = command_array[index].clone();
-                let mut values = Vec::<String>::new();
-                index += 2;
-                for i in (index..n).step_by(2) {
-                    values.push(command_array[i].clone());
-                }
+    let args: Vec<&str> = command_array
+        .iter()
+        .skip(1)
+        .step_by(2)
+        .map(String::as_str)
+        .collect();
+    match args.as_slice() {
+        ["PING"] => RedisCommand::Ping,
+        ["GET", key] => RedisCommand::Get(key.to_string()),
+        ["SET", key, value] => RedisCommand::Set(key.to_string(), value.to_string(), None),
+        ["SET", key, value, "PX", ttl] => RedisCommand::Set(
+            key.to_string(),
+            value.to_string(),
+            Some(ttl.parse().unwrap()),
+        ),
 
-                redisCommand = RedisCommand::RPush(key, values);
-            }
-            "LPUSH" => {
-                index += 2;
-                let key = command_array[index].clone();
-                let mut values = Vec::<String>::new();
-                index += 2;
-                for i in (index..n).step_by(2) {
-                    values.push(command_array[i].clone());
-                }
+        ["LLEN", key] => RedisCommand::LLEN(key.to_string()),
 
-                redisCommand = RedisCommand::LPush(key, values);
-            }
-            "LRANGE" => {
-                index += 2;
-                let key = command_array[index].clone();
-                index += 2;
-                let start: i32 = command_array[index].clone().parse().unwrap();
-                index += 2;
-                let end: i32 = command_array[index].clone().parse().unwrap();
-                redisCommand = RedisCommand::LRANGE(key, start, end);
-            }
-            "BLPOP" => {
-                
-                index+=2;
-                let key = command_array[index].clone();
-                index+=2;
-                let mut  timeout = command_array[index].clone().parse::<f64>().unwrap();
-                timeout = timeout * 1000 as f64;
-                redisCommand = RedisCommand::BLPOP(key, timeout as i32)
-                
-            }
-            "TYPE"=>{
-                index+=2;
-                let key = command_array[index].clone();
-                redisCommand = RedisCommand::TYPE(key);
-            }
-            _ => {
-                index += 1;
-                continue;
-            }
+        ["ECHO", msg] => RedisCommand::Echo(msg.to_string()),
+
+        ["LPOP", key] => RedisCommand::LPOP(key.to_string(), 1),
+
+        ["LPOP", key, count] => RedisCommand::LPOP(key.to_string(), count.parse().unwrap()),
+
+        ["BLPOP", key, timeout] => {
+            let t = timeout.parse::<f64>().unwrap() * 1000.0;
+            RedisCommand::BLPOP(key.to_string(), t as i32)
         }
-        println!("{:?}",redisCommand);
-        break;
+        ["RPUSH", key, rest @ ..] => RedisCommand::RPush(
+            key.to_string(),
+            rest.iter().map(|v| v.to_string()).collect(),
+        ),
+        ["LPUSH", key, rest @ ..] => RedisCommand::LPush(
+            key.to_string(),
+            rest.iter().map(|element| element.to_string()).collect(),
+        ),
+        ["TYPE", key] => RedisCommand::TYPE(key.to_string()),
+        _ => RedisCommand::Unkown,
     }
-
-    redisCommand
 }
