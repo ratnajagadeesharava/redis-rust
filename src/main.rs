@@ -9,6 +9,7 @@ mod redisDb;
 mod redisObject;
 mod redisServer;
 mod resp;
+mod radix_tree;
 use resp::Resp;
 use std::{
     cell::RefCell,
