@@ -64,7 +64,7 @@ impl RedisServer {
             generate_sequence = true;
         }
         let mut id = new_id;
-        println!("{id}")
+        println!("{id}");
         let id_u64: u128 = id_split_vec[0].parse().unwrap();
         let sequence_number: u32 = id_split_vec[1].parse().unwrap();
         let exisiting_id = self.redis_db.last_id;
