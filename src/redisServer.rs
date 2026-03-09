@@ -39,7 +39,10 @@ impl RedisServer {
             RedisCommand::Unkown => todo!(),
         }
     }
-
+    fn generate_id()->String{
+        let now  = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        Duration::as_millis(&now).to_string()
+    }
     fn xadd(
         &mut self,
         clientId: ClientId,
@@ -52,6 +55,9 @@ impl RedisServer {
         let mut id_split_vec: Vec<&str> = id.split("-").collect();
         let mut generate_sequence = false;
         let mut new_id = id.clone();
+         if id == "*"{
+            new_id = format!("{}-0",RedisServer::generate_id());
+         }
         if id_split_vec[1] == "*" {
             id_split_vec[1] = "0";
             new_id = format!("{}-0", id_split_vec[0]);
