@@ -51,14 +51,15 @@ impl RedisServer {
         key_values: Vec<(String, String)>,
     ) {
         let mut id = id;
+        if id == "*"{
+            id = format!("{}-0",RedisServer::generate_id());
+         }
         let client = self.client_map.get(&clientId).unwrap();
         let mut id_split_vec: Vec<&str> = id.split("-").collect();
         let mut generate_sequence = false;
         let mut new_id = id.clone();
-         if id == "*"{
-            new_id = format!("{}-0",RedisServer::generate_id());
-         }
-        else if id_split_vec[1] == "*" {
+         
+         if id_split_vec[1] == "*" {
             id_split_vec[1] = "0";
             new_id = format!("{}-0", id_split_vec[0]);
             generate_sequence = true;
